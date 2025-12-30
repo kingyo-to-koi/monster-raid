@@ -456,8 +456,8 @@
 
     <script>
       /* =========================
-         Utilities
-      ========================= */
+               Utilities
+            ========================= */
       const d6 = () => Math.floor(Math.random() * 6) + 1;
       const d10 = () => Math.floor(Math.random() * 10) + 1;
       const d5 = () => Math.floor(Math.random() * 5) + 1;
@@ -474,13 +474,13 @@
         else if (percent < 60) cls = "mid";
 
         return `
-          <div class="hpbar">
-            <div class="hpfill ${cls}" style="width:${percent}%"></div>
-          </div>
-          <div class="mono" style="font-size:11px; color:#aaa">
-            ${hp} / ${maxHp} (${percent}%)
-          </div>
-        `;
+                <div class="hpbar">
+                  <div class="hpfill ${cls}" style="width:${percent}%"></div>
+                </div>
+                <div class="mono" style="font-size:11px; color:#aaa">
+                  ${hp} / ${maxHp} (${percent}%)
+                </div>
+              `;
       }
 
       const ROLE_LABEL = {
@@ -506,8 +506,8 @@
       }
 
       /* =========================
-         Game Data
-      ========================= */
+               Game Data
+            ========================= */
       const game = {
         round: 1,
         phase: "HINT", // HINT | PLAYER | RESOLVE
@@ -520,8 +520,8 @@
       };
 
       /* =========================
-         Rules & Skills
-      ========================= */
+               Rules & Skills
+            ========================= */
       const ROLE = { TANK: "TANK", DPS: "DPS", SUPPORT: "SUPPORT" };
 
       const SKILLS = {
@@ -536,7 +536,7 @@
             {
               key: "PROTECT",
               name: "수호",
-              desc: "1턴간 지정 1인의 피해를 최종 방어값*1.3 만큼 경감, 경감분은 본인이 대신 받음",
+              desc: "1턴간 지정 1인의 피해를 대신 받아낸다. 이 때, 시전자의 방어값은 1.3배 추가된다.",
               target: "ALLY1",
             },
             {
@@ -660,8 +660,8 @@
       };
 
       /* =========================
-         Entity model
-      ========================= */
+               Entity model
+            ========================= */
       function makePlayer({ name, role, vit, atk, def, agi, actives, ult }) {
         const maxHp = 150 + vit * 10;
         return {
@@ -718,8 +718,8 @@
       }
 
       /* =========================
-         Combat Calculations
-      ========================= */
+               Combat Calculations
+            ========================= */
       function effectiveStat(entity, key) {
         const base = entity.base[key] || 0;
 
@@ -768,10 +768,10 @@
         return atk * roll;
       }
 
-      function baseDefenseMitigation(defender) {
+      function baseDefenseMitigation(defender, defMult = 1.0) {
         const def = effectiveStat(defender, "def");
         const roll = d6();
-        return def * roll;
+        return Math.floor(def * defMult * roll);
       }
 
       function consumeShield(defender, dmg) {
@@ -809,7 +809,7 @@
         let mitigated = 0;
 
         if (!ignoreDefense) {
-          const mit = baseDefenseMitigation(defender);
+          const mit = baseDefenseMitigation(defender, 1.0);
           mitigated += Math.min(mit, dmg);
           dmg = Math.max(0, dmg - mit);
         }
@@ -886,8 +886,8 @@
       }
 
       /* =========================
-         DOT / Debuff
-      ========================= */
+               DOT / Debuff
+            ========================= */
       function addDot(target, dot) {
         target.dots.push(dot);
       }
@@ -975,8 +975,8 @@
       }
 
       /* =========================
-         Logging & UI sync
-      ========================= */
+               Logging & UI sync
+            ========================= */
       function log(line) {
         game.logLines.push(`[${nowTime()}] ${line}`);
         const el = document.getElementById("battleLog");
@@ -1080,23 +1080,23 @@
           title.className = "row";
           title.style.justifyContent = "space-between";
           title.innerHTML = `
-            <div>
-              <h3 style="margin:0">${p.name} <small class="mono">(${
+                  <div>
+                    <h3 style="margin:0">${p.name} <small class="mono">(${
             p.role
           })</small></h3>
-              <small>${
-                p.down
-                  ? `<span class="danger">DOWN</span> (대기 ${p.downCounter})`
-                  : `HP ${p.hp}/${p.maxHp} | CRIT ${critChance(p)}%`
-              }</small>
-            </div>
-            <div class="rightMeta">
-              <span class="chip">액티브: ${p.actives
-                .map((k) => skillName(p.role, k))
-                .join(" / ")}</span>
-              <span class="chip">궁극: ${skillName(p.role, p.ult)}</span>
-            </div>
-          `;
+                    <small>${
+                      p.down
+                        ? `<span class="danger">DOWN</span> (대기 ${p.downCounter})`
+                        : `HP ${p.hp}/${p.maxHp} | CRIT ${critChance(p)}%`
+                    }</small>
+                  </div>
+                  <div class="rightMeta">
+                    <span class="chip">액티브: ${p.actives
+                      .map((k) => skillName(p.role, k))
+                      .join(" / ")}</span>
+                    <span class="chip">궁극: ${skillName(p.role, p.ult)}</span>
+                  </div>
+                `;
           card.appendChild(title);
 
           const disabled = game.phase !== "PLAYER" || p.down;
@@ -1108,39 +1108,45 @@
           const statKey = `stat_${p.id}`;
 
           card.innerHTML += `
-            <div class="actionRow">
-              <div>
-                <label>행동</label>
-                <select id="${actionKey}" ${disabled ? "disabled" : ""}>
-                  <option value="ATTACK">공격</option>
-                  <option value="DEFEND">방어</option>
-                  <option value="ACTIVE">액티브</option>
-                  <option value="ULT">궁극기</option>
-                </select>
-              </div>
-              <div>
-                <label>스킬(액티브/궁극기)</label>
-                <select id="${skillKey}" ${disabled ? "disabled" : ""}></select>
-              </div>
-              <div>
-                <label>대상 1</label>
-                <select id="${t1Key}" ${disabled ? "disabled" : ""}></select>
-              </div>
-              <div>
-                <label>대상 2 / (필요 시)</label>
-                <select id="${t2Key}" ${disabled ? "disabled" : ""}></select>
-              </div>
-              <div style="grid-column:1 / -1">
-                <label>격려 스탯 선택(서포터 격려 시)</label>
-                <select id="${statKey}" ${disabled ? "disabled" : ""}>
-                  <option value="atk">공격</option>
-                  <option value="def">방어</option>
-                  <option value="agi">민첩</option>
-                  <option value="vit">체력</option>
-                </select>
-              </div>
-            </div>
-          `;
+                  <div class="actionRow">
+                    <div>
+                      <label>행동</label>
+                      <select id="${actionKey}" ${disabled ? "disabled" : ""}>
+                        <option value="ATTACK">공격</option>
+                        <option value="DEFEND">방어</option>
+                        <option value="ACTIVE">액티브</option>
+                        <option value="ULT">궁극기</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>스킬(액티브/궁극기)</label>
+                      <select id="${skillKey}" ${
+            disabled ? "disabled" : ""
+          }></select>
+                    </div>
+                    <div>
+                      <label>대상 1</label>
+                      <select id="${t1Key}" ${
+            disabled ? "disabled" : ""
+          }></select>
+                    </div>
+                    <div>
+                      <label>대상 2 / (필요 시)</label>
+                      <select id="${t2Key}" ${
+            disabled ? "disabled" : ""
+          }></select>
+                    </div>
+                    <div style="grid-column:1 / -1">
+                      <label>격려 스탯 선택(서포터 격려 시)</label>
+                      <select id="${statKey}" ${disabled ? "disabled" : ""}>
+                        <option value="atk">공격</option>
+                        <option value="def">방어</option>
+                        <option value="agi">민첩</option>
+                        <option value="vit">체력</option>
+                      </select>
+                    </div>
+                  </div>
+                `;
 
           wrap.appendChild(card);
 
@@ -1358,8 +1364,8 @@
       }
 
       /* =========================
-         Monster Intent
-      ========================= */
+               Monster Intent
+            ========================= */
       function chooseMonsterIntent() {
         const aliveMonsters = game.monsters.filter((m) => m.alive);
         const alivePlayers = game.players.filter((p) => !p.down);
@@ -1439,8 +1445,8 @@
       }
 
       /* =========================
-         Round Flow
-      ========================= */
+               Round Flow
+            ========================= */
       function startRound() {
         if (game.players.length === 0) {
           log("⚠️ 플레이어를 먼저 추가하세요.");
@@ -1450,7 +1456,7 @@
           log("⚠️ 몬스터를 먼저 추가하세요.");
           return;
         }
-        if (game.phase !== "HINT") {
+        if (game.phase !== "HINT" && game.phase !== "RESOLVE") {
           log(
             "⚠️ 현재 라운드가 진행 중입니다. (라운드 해석 후 다음 라운드 시작)"
           );
@@ -1572,8 +1578,8 @@
       }
 
       /* =========================
-         Player Action Resolution
-      ========================= */
+               Player Action Resolution
+            ========================= */
       function resolvePlayerAction(p, a) {
         if (!a)
           a = {
@@ -1700,8 +1706,8 @@
       }
 
       /* =========================
-         Skills
-      ========================= */
+               Skills
+            ========================= */
       function resolveSkill(p, type, key, a) {
         // Pre-checks: targets existence
         const role = p.role;
@@ -1765,10 +1771,17 @@
               if (m) doAttack(p, m, { label: "기본공격" });
               return;
             }
-            const reduction = Math.floor(finalStat(p, "def") * 1.3);
-            ally.redirect = { tankId: p.id, reduction };
+
+            // "이번 턴"만 유효한 풀 리다이렉트
+            ally.redirect = {
+              tankId: p.id,
+              mode: "FULL",
+              defMult: 1.3,
+              expiresRound: game.round, // 선택: 라운드 종료 시 정리할 때 쓰기 좋음
+            };
+
             log(
-              `🛡️ ${p.name} 수호 → ${ally.name} 피해 ${reduction}까지 경감, 경감분은 ${p.name}이 대신 받음 (1턴)`
+              `🛡️ ${p.name} 수호 → ${ally.name} : 이번 턴 몬스터 공격/효과를 ${p.name}이 대신 받음 (방어 1.3배)`
             );
             return;
           }
@@ -2005,8 +2018,8 @@
       }
 
       /* =========================
-         Monster Action Resolution
-      ========================= */
+               Monster Action Resolution
+            ========================= */
       function resolveMonsterActions() {
         const intents = game.monsterIntents || [];
         for (const intent of intents) {
@@ -2125,69 +2138,71 @@
       }
 
       function dealMonsterDamage(monster, target, raw, { label = "" } = {}) {
-        // Handle "불굴" (tank takes all), "수호"(redirect), and damage floor on tank
-        // Find tank with tankingAll
+        // 1) 불굴(전체 대신맞기)
         const tankAll = game.players.find((p) => p.tankingAll && !p.down);
-        let actualTarget = target;
-        let debuffTarget = target;
-
         if (tankAll) {
-          actualTarget = tankAll;
-          debuffTarget = tankAll;
+          const res = applyDamage(tankAll, raw, {
+            ignoreDefense: false,
+            allowFloor: tankAll.minHpFloor,
+            defMult: 1.0,
+          });
+
+          log(
+            `👹 ${monster.name} → ${tankAll.name} (${label}) 피해 ${raw} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+          );
+
+          if (tankAll.endure) tankAll.endure.accum += res.dealt;
+          setDownIfNeeded(tankAll);
+          return;
         }
 
-        // Redirect from PROTECT: if victim has redirect, reduce damage by reduction and transfer reduced to tank
-        if (!tankAll && target.redirect && !target.down) {
+        // 2) 수호(FULL redirect)
+        if (
+          target &&
+          !target.down &&
+          target.redirect &&
+          target.redirect.mode === "FULL"
+        ) {
           const tank = pickPlayerById(target.redirect.tankId);
           if (tank && !tank.down) {
-            const red = target.redirect.reduction;
-            const reduced = Math.min(red, raw);
-            const remaining = Math.max(0, raw - reduced);
+            const defMult = target.redirect.defMult ?? 1.3;
 
-            // victim takes remaining
-            const res1 = applyDamage(target, remaining, {
-              ignoreDefense: false,
-            });
-            log(
-              `👹 ${monster.name} → ${target.name} (${label}) 피해 ${raw} (수호로 ${reduced} 경감) / 실제 ${res1.dealt}`
-            );
-
-            // tank takes reduced
-            const res2 = applyDamage(tank, reduced, {
+            const res = applyDamage(tank, raw, {
               ignoreDefense: false,
               allowFloor: tank.minHpFloor,
+              defMult, // ← 수호의 핵심: 방어 1.3배
             });
+
             log(
-              `   ↳ 수호 분담: ${tank.name} 피해 ${reduced} (실제 ${res2.dealt}, 보호막 ${res2.absorbed}, 경감 ${res2.mitigated})`
+              `👹 ${monster.name} → ${target.name} (${label}) 피해 ${raw} (수호: ${tank.name}이 대신 받음, 방어 ${defMult}배) ` +
+                `(실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
             );
 
-            // endure accum on tank
-            if (tank.endure) tank.endure.accum += res2.dealt;
-
-            setDownIfNeeded(target);
+            if (tank.endure) tank.endure.accum += res.dealt;
             setDownIfNeeded(tank);
-            return;
+            return; // ★ 피해 대상자(target)는 여기서 아무 피해도 받지 않음
           }
+          // 탱커가 없거나 다운이면 fallback으로 원래 대상이 맞음
         }
 
-        // Normal or UNYIELDING redirection
-        const res = applyDamage(actualTarget, raw, {
+        // 3) 기본: 원래 대상이 맞음
+        const res = applyDamage(target, raw, {
           ignoreDefense: false,
-          allowFloor: actualTarget.minHpFloor,
+          allowFloor: target.minHpFloor,
+          defMult: 1.0,
         });
+
         log(
-          `👹 ${monster.name} → ${actualTarget.name} (${label}) 피해 ${raw} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+          `👹 ${monster.name} → ${target.name} (${label}) 피해 ${raw} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
         );
 
-        // endure accum if target is tank with endure
-        if (actualTarget.endure) actualTarget.endure.accum += res.dealt;
-
-        setDownIfNeeded(actualTarget);
+        if (target.endure) target.endure.accum += res.dealt;
+        setDownIfNeeded(target);
       }
 
       /* =========================
-         Target helpers
-      ========================= */
+               Target helpers
+            ========================= */
       function pickPlayerById(id) {
         return game.players.find((p) => p.id === id);
       }
@@ -2204,8 +2219,8 @@
       }
 
       /* =========================
-         Character Creation UI
-      ========================= */
+               Character Creation UI
+            ========================= */
       function populateSkillSelectors() {
         const roleSel = document.getElementById("pRole");
         const a1 = document.getElementById("pActive1");
@@ -2254,10 +2269,10 @@
       }
 
       /* =========================
-         Buff cleanup (ENCOURAGE)
-         We used debuff markers ENCOURAGE_* to remove their stat+2 at end of round.
-         This is handled by decayDebuffsEndRound, but we must also revert temp stat.
-      ========================= */
+               Buff cleanup (ENCOURAGE)
+               We used debuff markers ENCOURAGE_* to remove their stat+2 at end of round.
+               This is handled by decayDebuffsEndRound, but we must also revert temp stat.
+            ========================= */
       const _oldDecay = decayDebuffsEndRound;
       decayDebuffsEndRound = function () {
         // Before decrement removal, find expiring ENCOURAGE debuffs and revert
@@ -2275,8 +2290,8 @@
       };
 
       /* =========================
-         Wire UI Events
-      ========================= */
+               Wire UI Events
+            ========================= */
       populateSkillSelectors();
 
       ["pVit", "pAtk", "pDef", "pAgi"].forEach((id) => {
@@ -2470,4 +2485,3 @@
     </script>
   </body>
 </html>
-
