@@ -1,0 +1,2898 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Monster Raid (Vanilla JS)</title>
+    <style>
+      :root {
+        --bg: #0f0f14;
+        --panel: #171724;
+        --panel2: #1e1e2e;
+        --text: #eaeaf0;
+        --muted: #a9aac0;
+        --line: #2d2d44;
+        --btn: #2e2e44;
+        --btn2: #3a3a56;
+        --danger: #ff5d5d;
+        --ok: #5dffa5;
+        --warn: #ffd15d;
+        --accent: #7aa0ff;
+        --chip: #26263a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      h2,
+      h3,
+      h4 {
+        margin: 8px 0;
+      }
+      small {
+        color: var(--muted);
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr 1fr;
+        gap: 12px;
+        min-height: calc(100vh - 32px);
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        overflow: auto;
+      }
+      .panel header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input,
+      select {
+        background: var(--panel2);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 8px;
+        outline: none;
+        min-width: 0px;
+        font-size: 13px;
+      }
+      input[type="number"] {
+        width: 56px;
+        height: 30px;
+        min-width: 0;
+      }
+      button {
+        background: var(--btn);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--btn2);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .hr {
+        height: 1px;
+        background: var(--line);
+        margin: 10px 0;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--chip);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+        margin-right: 6px;
+        margin-bottom: 6px;
+        white-space: nowrap;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+      }
+      .statgrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .statline {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 12px;
+      }
+      .hpbar {
+        height: 14px;
+        background: #0b0b12;
+        border: 1px solid #2d2d44;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .hpfill {
+        height: 100%;
+        transition: width 0.3s ease;
+      }
+
+      .hpfill.high {
+        background: #5dffa5;
+      } /* 60% 이상 */
+      .hpfill.mid {
+        background: #ffd15d;
+      } /* 30~59% */
+      .hpfill.low {
+        background: #ff5d5d;
+      } /* 0~29% */
+      .danger {
+        color: var(--danger);
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .log {
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: pre-wrap;
+      }
+      .stickyFooter {
+        position: sticky;
+        bottom: 0;
+        background: linear-gradient(
+          transparent,
+          rgba(15, 15, 20, 0.85) 25%,
+          rgba(15, 15, 20, 0.95)
+        );
+        padding-top: 8px;
+        margin-top: 8px;
+      }
+      .actionRow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .actionRow > div {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .wide {
+        min-width: 220px;
+      }
+      .pillBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 8px 12px;
+      }
+      .mini {
+        padding: 6px 8px;
+        font-size: 12px;
+        border-radius: 8px;
+      }
+      .rightMeta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+
+      .skillSelect {
+        min-width: 0; /* ⭐ 가장 중요 */
+        max-width: 100%;
+        padding: 6px 8px; /* 높이 줄이기 */
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* 중앙 행동 선택 카드 2열 배치 */
+      #playerActionCards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- LEFT: creation -->
+      <section class="panel" id="leftPanel">
+        <header>
+          <div>
+            <h2>생성</h2>
+            <small>캐릭터 최대 8명 / 몬스터 최대 4마리</small>
+          </div>
+          <div class="rightMeta">
+            <span class="chip mono" id="roundChip">ROUND 1</span>
+            <span class="chip mono" id="phaseChip">PHASE: HINT</span>
+          </div>
+        </header>
+
+        <div class="card">
+          <h3>캐릭터 생성</h3>
+
+          <div class="row">
+            <div class="col">
+              <label>이름</label>
+              <input id="pName" placeholder="예: 마리" />
+            </div>
+
+            <div class="col">
+              <label>직군</label>
+              <select id="pRole">
+                <option value="TANK">탱커</option>
+                <option value="DPS">딜러</option>
+                <option value="SUPPORT">서포터</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="row">
+            <div class="col">
+              <label>체력</label>
+              <input id="pVit" type="number" min="1" max="12" value="7" />
+            </div>
+            <div class="col">
+              <label>공격</label>
+              <input id="pAtk" type="number" min="1" max="12" value="7" />
+            </div>
+            <div class="col">
+              <label>방어</label>
+              <input id="pDef" type="number" min="1" max="12" value="6" />
+            </div>
+            <div class="col">
+              <label>민첩</label>
+              <input id="pAgi" type="number" min="1" max="12" value="6" />
+            </div>
+          </div>
+          <small id="sumHint" class="warn">패시브 포함 스탯 28</small>
+
+          <div class="hr"></div>
+
+          <div class="row">
+            <div class="col" style="flex: 1">
+              <label>액티브(택2)</label>
+              <select id="pActive1" class="wide skillSelect"></select>
+              <select id="pActive2" class="wide skillSelect"></select>
+              <small class="muted">액티브는 연속 사용 불가 (A→A 불가)</small>
+            </div>
+            <div class="col" style="flex: 1">
+              <label>궁극기(택1)</label>
+              <select id="pUlt" class="wide skillSelect"></select>
+              <small class="muted">러닝 중 1회</small>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top: 10px">
+            <button id="addPlayerBtn" class="pillBtn">+ 캐릭터 추가</button>
+            <button id="clearPlayersBtn" class="mini">캐릭터 초기화</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>몬스터 생성</h3>
+
+          <div class="row">
+            <div class="col">
+              <label>이름</label>
+              <input id="mName" placeholder="예: MONSTER A" />
+            </div>
+            <div class="col">
+              <label>HP(기본)</label>
+              <input
+                id="mHpBase"
+                type="number"
+                min="50"
+                max="5000"
+                value="500"
+              />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col">
+              <label>체력</label>
+              <input id="mVit" type="number" min="1" max="20" value="10" />
+            </div>
+            <div class="col">
+              <label>공격</label>
+              <input id="mAtk" type="number" min="1" max="20" value="8" />
+            </div>
+            <div class="col">
+              <label>방어</label>
+              <input id="mDef" type="number" min="1" max="20" value="6" />
+            </div>
+            <div class="col">
+              <label>민첩</label>
+              <input id="mAgi" type="number" min="1" max="20" value="6" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top: 10px">
+            <button id="addMonsterBtn" class="pillBtn">+ 몬스터 추가</button>
+            <button id="clearMonstersBtn" class="mini">몬스터 초기화</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>전투 제어</h3>
+          <div class="row">
+            <button id="startRoundBtn" class="pillBtn">1) 라운드 시작</button>
+            <button id="resolveBtn" class="pillBtn">2) 라운드 합산</button>
+            <button id="undoBtn" class="pillBtn" style="background:#e67e22;">↩ 되돌리기</button>
+            <button id="resetBattleBtn" class="mini">전투 리셋</button>
+          </div>
+          <small class="muted">
+            흐름: 라운드 시작(몬스터 행동 암시) → 중앙에서 플레이어 행동 선택 →
+            라운드 해석(플레이어→몬스터→최종 합산) | 되돌리기: 합산 전으로 롤백
+          </small>
+        </div>
+      </section>
+
+      <!-- CENTER: actions -->
+      <section class="panel" id="centerPanel">
+        <header>
+          <div>
+            <h2>행동 선택</h2>
+            <small>각 플레이어의 행동/스킬/대상을 설정</small>
+          </div>
+        </header>
+
+        <div class="card">
+          <h3>현재 암시</h3>
+          <div id="hintBox" class="log">
+            라운드 시작 버튼을 눌러 암시를 생성하세요.
+          </div>
+        </div>
+
+        <div class="cards" id="playerActionCards"></div>
+
+        <div class="stickyFooter">
+          <div class="row" style="justify-content: space-between">
+            <div class="row">
+              <button id="autoFillBtn" class="mini">
+                자동 입력(기본 공격)
+              </button>
+              <button id="clearActionsBtn" class="mini">행동 초기화</button>
+            </div>
+            <div class="row">
+              <span class="chip mono" id="readyChip">READY: 0/0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: logs -->
+      <section class="panel" id="rightPanel">
+        <header>
+          <div>
+            <h2>로그</h2>
+            <small>HP/스탯 변화, 상태이상, 피해/경감 내역</small>
+          </div>
+          <div class="row">
+            <button id="copyLogBtn" class="mini">로그 복사</button>
+            <button id="clearLogBtn" class="mini">로그 비우기</button>
+          </div>
+        </header>
+
+        <div class="card">
+          <h3>몬스터 상태</h3>
+          <div id="monsterState" class="log">몬스터가 없습니다.</div>
+        </div>
+
+        <div class="card">
+          <h3>플레이어 상태</h3>
+          <div id="playerState" class="log">플레이어가 없습니다.</div>
+        </div>
+
+        <div class="card">
+          <h3>전투 로그</h3>
+          <div id="battleLog" class="log"></div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      /* =========================
+               Utilities
+            ========================= */
+      const d2 = () => Math.floor(Math.random() * 2) + 1;
+      const d5 = () => Math.floor(Math.random() * 5) + 1;
+      const d6 = () => Math.floor(Math.random() * 6) + 1;
+      const d10 = () => Math.floor(Math.random() * 10) + 1;
+
+      const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+      const pct = (p) => Math.random() * 100 < p;
+      const nowTime = () => new Date().toLocaleTimeString();
+
+      function hpBarHTML(hp, maxHp) {
+        const ratio = maxHp > 0 ? hp / maxHp : 0;
+        const percent = Math.max(0, Math.min(100, Math.floor(ratio * 100)));
+
+        let cls = "high";
+        if (percent < 30) cls = "low";
+        else if (percent < 60) cls = "mid";
+
+        return `
+                <div class="hpbar">
+                  <div class="hpfill ${cls}" style="width:${percent}%"></div>
+                </div>
+                <div class="mono" style="font-size:11px; color:#aaa">
+                  ${hp} / ${maxHp} (${percent}%)
+                </div>
+              `;
+      }
+
+      const ROLE_LABEL = {
+        TANK: "탱커",
+        DPS: "딜러",
+        SUPPORT: "서포터",
+      };
+
+      function deepCopy(obj) {
+        return JSON.parse(JSON.stringify(obj));
+      }
+
+      function fmtHp(hp, max) {
+        const p =
+          max > 0
+            ? Math.max(0, Math.min(100, Math.round((hp / max) * 100)))
+            : 0;
+        return `${hp}/${max} (${p}%)`;
+      }
+
+      function makeId(prefix) {
+        return prefix + "_" + Math.random().toString(36).slice(2, 9);
+      }
+
+      /* =========================
+               Game Data
+            ========================= */
+      const game = {
+        round: 1,
+        phase: "HINT", // HINT | PLAYER | RESOLVE
+        players: [],
+        monsters: [],
+        // per round
+        monsterIntents: null, // {type, text, targets?}
+        actions: new Map(), // playerId -> action object
+        logLines: [],
+      };
+
+      // 되돌리기를 위한 스냅샷 저장
+      let gameSnapshot = null;
+
+      function deepClone(obj) {
+        if (obj === null || typeof obj !== 'object') return obj;
+        if (obj instanceof Map) {
+          const newMap = new Map();
+          obj.forEach((v, k) => newMap.set(k, deepClone(v)));
+          return newMap;
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(item => deepClone(item));
+        }
+        const cloned = {};
+        for (const key in obj) {
+          if (obj.hasOwnProperty(key)) {
+            cloned[key] = deepClone(obj[key]);
+          }
+        }
+        return cloned;
+      }
+
+      function saveSnapshot() {
+        gameSnapshot = {
+          round: game.round,
+          phase: game.phase,
+          players: deepClone(game.players),
+          monsters: deepClone(game.monsters),
+          monsterIntents: deepClone(game.monsterIntents),
+          actions: deepClone(game.actions),
+          logLines: [...game.logLines],
+        };
+      }
+
+      function restoreSnapshot() {
+        if (!gameSnapshot) {
+          log("⚠️ 되돌릴 수 있는 상태가 없습니다.");
+          return false;
+        }
+        game.round = gameSnapshot.round;
+        game.phase = gameSnapshot.phase;
+        game.players = deepClone(gameSnapshot.players);
+        game.monsters = deepClone(gameSnapshot.monsters);
+        game.monsterIntents = deepClone(gameSnapshot.monsterIntents);
+        game.actions = deepClone(gameSnapshot.actions);
+        game.logLines = [...gameSnapshot.logLines];
+        return true;
+      }
+
+      function undoRound() {
+        if (!gameSnapshot) {
+          log("⚠️ 되돌릴 수 있는 상태가 없습니다. (라운드 합산 전에는 되돌리기 불가)");
+          return;
+        }
+        if (restoreSnapshot()) {
+          log("↩ 합산 전 상태로 되돌렸습니다. 행동을 다시 선택하세요.");
+          renderPlayerActionCards();
+          renderStates();
+          // 몬스터 행동 암시 다시 표시
+          if (game.monsterIntents) {
+            const hintText = game.monsterIntents
+              .map((x) => "- " + x.text)
+              .join("\n");
+            document.getElementById("hintBox").textContent = hintText;
+          }
+        }
+      }
+
+      /* =========================
+               Rules & Skills
+            ========================= */
+      const ROLE = { TANK: "TANK", DPS: "DPS", SUPPORT: "SUPPORT" };
+
+      const SKILLS = {
+        TANK: {
+          active: [
+            {
+              key: "GUARD",
+              name: "호위",
+              desc: "1턴간 지정 2인에게 자신의 최종 방어 값*0.5 보호막",
+              target: "ALLY2",
+            },
+            {
+              key: "PROTECT",
+              name: "수호",
+              desc: "1턴간 지정 1인의 피해를 대신 받아낸다. 이 때, 시전자의 방어값은 1.3배 추가된다.",
+              target: "ALLY1",
+            },
+            {
+              key: "ENDURE",
+              name: "인내",
+              desc: "3턴간 받은 피해 누적 → 종료 시 누적*0.5 반사 + 어그로 50% 증가",
+              target: "NONE",
+            },
+            {
+              key: "FIGHTING_SPIRIT",
+              name: "투혼",
+              desc: "2턴간 방어 스탯 -5, 매 턴 지정 적 1에게 고정 100",
+              target: "ENEMY1",
+            },
+          ],
+          ult: [
+            {
+              key: "UNYIELDING",
+              name: "불굴",
+              desc: "1턴간 모든 아군 피해/디버프를 본인이 받음. 체력은 1 미만으로 내려가지 않음",
+              target: "NONE",
+            },
+            {
+              key: "DEVOTION",
+              name: "헌신",
+              desc: "현재 체력 100% 소모 후 최종 방어값*2 만큼 적 전체 공격",
+              target: "ENEMY_ALL",
+            },
+          ],
+        },
+        DPS: {
+          active: [
+            {
+              key: "MADNESS",
+              name: "광기",
+              desc: "다음 1턴간 공격 스탯 +2 (중첩 가능)",
+              target: "NONE",
+            },
+            {
+              key: "OBSESSION",
+              name: "집념",
+              desc: "3턴간 지정 적 1에게 기본 공격값*0.5 지속 피해(중첩 가능)",
+              target: "ENEMY1",
+            },
+            {
+              key: "BLOODFIGHT",
+              name: "혈투",
+              desc: "현재 체력 50% 소모 후 지정 적 1에게 최종 공격값*1.5",
+              target: "ENEMY1",
+            },
+            {
+              key: "MASSACRE",
+              name: "참살",
+              desc: "적 전체에게 최종 공격값*0.8",
+              target: "ENEMY_ALL",
+            },
+          ],
+          ult: [
+            {
+              key: "MERCY",
+              name: "자비",
+              desc: "공격 다이스 2회 합산 후 최종 공격값*2",
+              target: "ENEMY1",
+            },
+            {
+              key: "CHARGE",
+              name: "돌격",
+              desc: "적 방어값 무시, 공격 다이스 2회 합산 후 ×1.5 공격",
+              target: "ENEMY1",
+            },
+          ],
+        },
+        SUPPORT: {
+          active: [
+            {
+              key: "REVIVE",
+              name: "회생",
+              desc: "지정 1인 체력을 최종 민첩값 만큼 회복",
+              target: "ALLY1",
+            },
+            {
+              key: "BLESS",
+              name: "가호",
+              desc: "지정 2인 체력을 최종 민첩값*0.5 만큼 회복",
+              target: "ALLY2",
+            },
+            {
+              key: "ENCOURAGE",
+              name: "격려",
+              desc: "다음 1턴간 지정 1인의 지정 스탯 +2 (중첩 가능)",
+              target: "ALLY1_STAT",
+            },
+            {
+              key: "PURIFY",
+              name: "정화",
+              desc: "지정 2인의 디버프 해제",
+              target: "ALLY2",
+            },
+            {
+              key: "PENANCE",
+              name: "참회",
+              desc: "지정 적 1인의 최종 공격값을 (본인 최종 민첩값*0.5)만큼 감소(중첩 불가, 1턴)",
+              target: "ENEMY1",
+            },
+          ],
+          ult: [
+            {
+              key: "REINCARNATION",
+              name: "윤회",
+              desc: "지정 아군 1인의 궁극기 횟수 초기화",
+              target: "ALLY1",
+            },
+            {
+              key: "REST",
+              name: "안식",
+              desc: "전체 아군 100% 회복 + 다운 대기 제거 + 전체 액티브 재사용 초기화",
+              target: "ALLY_ALL",
+            },
+          ],
+        },
+      };
+
+      /* =========================
+               Entity model
+            ========================= */
+      function makePlayer({ name, role, vit, atk, def, agi, actives, ult }) {
+        const maxHp = 150 + vit * 10;
+        return {
+          id: makeId("P"),
+          type: "PLAYER",
+          name,
+          role,
+          base: { vit, atk, def, agi },
+          // dynamic buffs (turn-based)
+          temp: {
+            atkPlus: 0, // from MADNESS (applies next turn) and ENCOURAGE etc.
+            defPlus: 0,
+            agiPlus: 0,
+            vitPlus: 0,
+          },
+          hp: maxHp,
+          maxHp,
+          down: false,
+          downCounter: 0, // when >0 cannot act; when reaches 0 -> revive 30%
+          ultUsed: false,
+          actives,
+          ult,
+          lastActiveKey: null,
+          // states
+          shields: [], // [{value, expiresRound}]
+          redirect: null, // {tankId, reduction} applied to this player
+          tankingAll: false, // UNYIELDING flag on tank
+          minHpFloor: false, // if true: hp cannot drop below 1 this round
+          debuffs: [], // [{type, value, turns, sourceId}]
+          dots: [], // [{type, value, turns, sourceId}] ticking each round start
+          endure: null, // {accum, turnsLeft}
+          fightingSpirit: null, // {targetId, turnsLeft}
+          pendingAtkPlusNext: 0, // for MADNESS stacking
+          pendingEncourage: [], // [{stat, value}] for next turn ENCOURAGE
+          hasAggro: false, // 인내 스킬 사용 시 어그로 증가
+        };
+      }
+
+      function makeMonster({ name, vit, atk, def, agi, hpBase }) {
+        const maxHp = hpBase; // monster HP is manual base as requested
+        return {
+          id: makeId("M"),
+          type: "MONSTER",
+          name,
+          base: { vit, atk, def, agi },
+          temp: { atkPlus: 0, defPlus: 0, agiPlus: 0, vitPlus: 0 },
+          hp: maxHp,
+          maxHp,
+          alive: true,
+          buffs: [],
+          debuffs: [],
+          dots: [],
+          shields: [],
+          // monster-specific
+        };
+      }
+
+      /* =========================
+               Combat Calculations
+            ========================= */
+      function effectiveStat(entity, key) {
+        const base = entity.base[key] || 0;
+
+        // 플레이어 temp 스탯 (격려 등)
+        const plusKey = key + "Plus";
+        const plus = entity.temp?.[plusKey] || 0;
+
+        // 몬스터 자가버프 합산
+        let buff = 0;
+        if (entity.buffs) {
+          for (const b of entity.buffs) {
+            if (b.stat === key) {
+              buff += b.value;
+            }
+          }
+        }
+
+        // special: fighting spirit reduces DEF base stat by 5 while active (tank only)
+        let special = 0;
+        if (
+          entity.type === "PLAYER" &&
+          entity.fightingSpirit &&
+          key === "def"
+        ) {
+          special -= 5;
+        }
+
+        return clamp(base + plus + buff + special, 0, 99);
+      }
+
+      // "final stat value" as used in skills: stat * 1d6
+      function finalStat(entity, key) {
+        const s = effectiveStat(entity, key);
+        return s * d6();
+      }
+
+      function critChance(entity) {
+        // only base agility stat (initial), not buffs: per spec
+        const p = clamp(entity.base.agi, 0, 100);
+        return p;
+      }
+
+      function baseAttackDamage(attacker) {
+        const atk = effectiveStat(attacker, "atk");
+        const roll = d6();
+        return { damage: atk * roll, atk, roll };
+      }
+
+      function baseDefenseMitigation(defender, defMult = 1.0) {
+        const def = effectiveStat(defender, "def");
+        // 플레이어는 1d2, 몬스터는 1d5
+        const roll = defender.type === "MONSTER" ? d5() : d2();
+        const diceType = defender.type === "MONSTER" ? "1d5" : "1d2";
+        return {
+          mitigation: Math.floor(def * defMult * roll),
+          def,
+          roll,
+          defMult,
+          diceType,
+        };
+      }
+
+      function consumeShield(defender, dmg) {
+        if (dmg <= 0) return { dmg: 0, absorbed: 0 };
+        let remaining = dmg;
+        let absorbed = 0;
+        // shields consume oldest first
+        defender.shields.sort((a, b) => a.expiresRound - b.expiresRound);
+        for (const sh of defender.shields) {
+          if (remaining <= 0) break;
+          const take = Math.min(sh.value, remaining);
+          sh.value -= take;
+          remaining -= take;
+          absorbed += take;
+        }
+        defender.shields = defender.shields.filter((s) => s.value > 0);
+        return { dmg: remaining, absorbed };
+      }
+
+      function applyDamage(
+        defender,
+        rawDmg,
+        {
+          ignoreDefense = false,
+          sourceText = "",
+          allowFloor = false,
+          defMult = 1.0,
+        } = {}
+      ) {
+        if (defender.type === "MONSTER" && !defender.alive)
+          return { dealt: 0, mitigated: 0, absorbed: 0, defFormula: "" };
+
+        // downed still can take damage (keeps at 0), but we'll allow
+        let dmg = Math.max(0, Math.floor(rawDmg));
+
+        // shields first
+        const shieldRes = consumeShield(defender, dmg);
+        dmg = shieldRes.dmg;
+
+        let mitigated = 0;
+        let defFormula = "";
+
+        if (!ignoreDefense) {
+          const mitResult = baseDefenseMitigation(defender, defMult);
+          const mit = mitResult.mitigation;
+          mitigated += Math.min(mit, dmg);
+          dmg = Math.max(0, dmg - mit);
+
+          // 방어 수식 기록
+          const diceType = mitResult.diceType || "1d2";
+          if (defMult !== 1.0) {
+            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${diceType})×${defMult}=${mit}`;
+          } else {
+            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${diceType})=${mit}`;
+          }
+        }
+
+        // defend action adds extra mitigation stored on defender this round
+        if (defender._defendBonus && !ignoreDefense) {
+          const extra = defender._defendBonus;
+          mitigated += Math.min(extra, dmg);
+          dmg = Math.max(0, dmg - extra);
+          defFormula += defFormula
+            ? ` +방어행동 ${extra}`
+            : `방어행동 ${extra}`;
+        }
+
+        const beforeHp = defender.hp;
+        defender.hp = Math.max(0, defender.hp - dmg);
+
+        // UNYIELDING floor (hp cannot go below 1)
+        if (defender.type === "PLAYER") {
+          if (defender.minHpFloor || allowFloor) {
+            if (defender.hp < 1) defender.hp = 1;
+          }
+        }
+
+        // monster alive flag
+        if (defender.type === "MONSTER") {
+          if (defender.hp <= 0) {
+            defender.alive = false;
+            defender.hp = 0;
+          }
+        }
+
+        const dealt = beforeHp - defender.hp;
+
+        return {
+          dealt,
+          mitigated,
+          absorbed: shieldRes.absorbed,
+          defFormula,
+        };
+      }
+
+      function heal(target, amount) {
+        const v = Math.max(0, Math.floor(amount));
+        const before = target.hp;
+        target.hp = Math.min(target.maxHp, target.hp + v);
+        return target.hp - before;
+      }
+
+      function setDownIfNeeded(player) {
+        if (player.type !== "PLAYER") return;
+        if (player.hp <= 0 && !player.down) {
+          player.down = true;
+          player.downCounter = 2; // 1턴 대기 후 2턴에서(=2라운드 후) 행동 가능으로 구현
+          player.hp = 0;
+        }
+      }
+
+      function reviveIfReady(player) {
+        if (player.type !== "PLAYER") return;
+        if (player.down) {
+          player.downCounter = Math.max(0, player.downCounter - 1);
+          if (player.downCounter === 0) {
+            player.down = false;
+            player.hp = Math.max(1, Math.floor(player.maxHp * 0.3));
+            log(`↺ ${player.name} 소생: HP ${player.hp}/${player.maxHp} (30%)`);
+          }
+        } else {
+          // apply "madness" pending atk+ for this round start
+          if (player.pendingAtkPlusNext > 0) {
+            player.temp.atkPlus += player.pendingAtkPlusNext;
+            // 1턴 후 제거를 위한 디버프 마커 추가 (격려와 동일한 방식)
+            addDebuff(player, {
+              type: "MADNESS_ATK",
+              value: player.pendingAtkPlusNext,
+              turns: 1,
+              sourceId: player.id,
+            });
+            log(
+              `▲ ${player.name} 공격 +${player.pendingAtkPlusNext} (광기 적용, 이번 턴만)`
+            );
+            player.pendingAtkPlusNext = 0;
+          }
+          // apply pending ENCOURAGE buffs for this round
+          if (player.pendingEncourage && player.pendingEncourage.length > 0) {
+            for (const enc of player.pendingEncourage) {
+              const plusKey = enc.stat + "Plus";
+              player.temp[plusKey] += enc.value;
+              // 1턴 후 제거를 위한 디버프 마커 추가
+              addDebuff(player, {
+                type: "ENCOURAGE_" + enc.stat.toUpperCase(),
+                value: enc.value,
+                turns: 1,
+                sourceId: enc.sourceId,
+              });
+              log(
+                `📣 ${player.name} 격려 발동: ${enc.stat.toUpperCase()} +${
+                  enc.value
+                } (이번 턴)`
+              );
+            }
+            player.pendingEncourage = [];
+          }
+        }
+      }
+
+      /* =========================
+               DOT / Debuff
+            ========================= */
+      function addDot(target, dot) {
+        target.dots.push(dot);
+      }
+      function addDebuff(target, debuff) {
+        // PENANCE not stackable
+        if (debuff.type === "PENANCE") {
+          if (target.debuffs.some((d) => d.type === "PENANCE")) return false;
+        }
+        target.debuffs.push(debuff);
+        return true;
+      }
+      function clearDebuffs(target) {
+        target.debuffs = [];
+      }
+      function tickDots() {
+        // tick at round start
+        for (const p of game.players) {
+          if (p.type !== "PLAYER") continue;
+          if (p.down) continue; // downed does not tick? if you prefer tick, remove this line.
+          let bleedTotal = 0;
+          let otherTotal = 0;
+          const kept = [];
+          for (const d of p.dots) {
+            if (d.type === "BLEED") {
+              bleedTotal += d.value;
+            } else {
+              otherTotal += d.value;
+            }
+            d.turns -= 1;
+            if (d.turns > 0) kept.push(d);
+          }
+          // 출혈(BLEED)은 방어 무시
+          if (bleedTotal > 0) {
+            const res = applyDamage(p, bleedTotal, {
+              sourceText: "BLEED",
+              ignoreDefense: true,
+            });
+            log(
+              `🩸 ${p.name} 출혈 피해 ${bleedTotal} (방어 무시, 실제 ${res.dealt}, 보호막 ${res.absorbed})`
+            );
+            // 인내 누적
+            if (p.endure) {
+              p.endure.accum += res.dealt;
+              log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
+            }
+            setDownIfNeeded(p);
+          }
+          // 기타 DOT는 방어 적용
+          if (otherTotal > 0) {
+            const res = applyDamage(p, otherTotal, { sourceText: "DOT" });
+            log(
+              `🩸 ${p.name} DOT 피해 ${otherTotal} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+            );
+            // 인내 누적
+            if (p.endure) {
+              p.endure.accum += res.dealt;
+              log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
+            }
+            setDownIfNeeded(p);
+          }
+          p.dots = kept;
+        }
+        for (const m of game.monsters) {
+          if (!m.alive) continue;
+          let total = 0;
+          const kept = [];
+          for (const d of m.dots) {
+            total += d.value;
+            d.turns -= 1;
+            if (d.turns > 0) kept.push(d);
+          }
+          if (total > 0) {
+            const res = applyDamage(m, total, { sourceText: "DOT" });
+            log(
+              `🩸 ${m.name} DOT 피해 ${total} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+            );
+          }
+          m.dots = kept;
+        }
+      }
+
+      function applyDebuffsToMonsterAttack(monster, base) {
+        // PENANCE: reduce final attack by supporter final agi*0.5 (stored as value)
+        let reduced = 0;
+        for (const d of monster.debuffs) {
+          if (d.type === "PENANCE") {
+            reduced += d.value;
+          }
+        }
+        return Math.max(0, base - reduced);
+      }
+
+      function decayDebuffsEndRound() {
+        // decrement debuffs duration, remove expired
+        for (const e of [...game.players, ...game.monsters]) {
+          const kept = [];
+          for (const d of e.debuffs) {
+            d.turns -= 1;
+            if (d.turns > 0) kept.push(d);
+          }
+          e.debuffs = kept;
+          // --- ⭐ 몬스터 버프 감소 (추가 부분) ---
+          if (e.buffs) {
+            const keptBuffs = [];
+            for (const b of e.buffs) {
+              b.turns -= 1;
+              if (b.turns > 0) keptBuffs.push(b);
+            }
+            e.buffs = keptBuffs;
+          }
+        }
+      }
+
+      /* =========================
+               Logging & UI sync
+            ========================= */
+      function log(line) {
+        game.logLines.push(`[${nowTime()}] ${line}`);
+        const el = document.getElementById("battleLog");
+        el.textContent = game.logLines.slice(-500).join("\n");
+        el.scrollTop = el.scrollHeight;
+        renderStates();
+      }
+
+      function renderStates() {
+        // Monster state
+        const ms = document.getElementById("monsterState");
+        if (game.monsters.length === 0) {
+          ms.textContent = "몬스터가 없습니다.";
+        } else {
+          const lines = [];
+          for (const m of game.monsters) {
+            const alive = m.alive ? "ALIVE" : "DEAD";
+            const deb = m.debuffs
+              .map((d) => `${d.type}:${d.value}(${d.turns})`)
+              .join(", ");
+            const dot = m.dots
+              .map((d) => `${d.type}:${d.value}(${d.turns})`)
+              .join(", ");
+            lines.push(
+              `${m.name} [${alive}] HP ${fmtHp(
+                m.hp,
+                m.maxHp
+              )} | 공격 ${effectiveStat(m, "atk")} 방어 ${effectiveStat(
+                m,
+                "def"
+              )} 민첩 ${effectiveStat(m, "agi")}` +
+                (deb ? ` | DEBUFF {${deb}}` : "") +
+                (dot ? ` | DOT {${dot}}` : "")
+            );
+          }
+          ms.textContent = lines.join("\n");
+        }
+
+        // Player state
+        const ps = document.getElementById("playerState");
+        if (game.players.length === 0) {
+          ps.textContent = "플레이어가 없습니다.";
+        } else {
+          const lines = [];
+          for (const p of game.players) {
+            const state = p.down ? `DOWN(${p.downCounter})` : "OK";
+            const shields = p.shields
+              .map((s) => `${Math.floor(s.value)}@R${s.expiresRound}`)
+              .join(",");
+            const deb = p.debuffs
+              .map((d) => `${d.type}:${d.value}(${d.turns})`)
+              .join(", ");
+            const dot = p.dots
+              .map((d) => `${d.type}:${d.value}(${d.turns})`)
+              .join(", ");
+            lines.push(
+              `${p.name} [${
+                ROLE_LABEL[p.role] || p.role
+              }] [${state}] HP ${fmtHp(p.hp, p.maxHp)} | 체력 ${effectiveStat(
+                p,
+                "vit"
+              )} 공격 ${effectiveStat(p, "atk")} 방어 ${effectiveStat(
+                p,
+                "def"
+              )} 민첩 ${effectiveStat(p, "agi")} | 치명타율 ${critChance(p)}%` +
+                (shields ? ` | SHIELD {${shields}}` : "") +
+                (deb ? ` | DEBUFF {${deb}}` : "") +
+                (dot ? ` | DOT {${dot}}` : "") +
+                (p.ultUsed ? ` | ULT USED` : "")
+            );
+          }
+          ps.textContent = lines.join("\n");
+        }
+
+        // round chips
+        document.getElementById(
+          "roundChip"
+        ).textContent = `ROUND ${game.round}`;
+        document.getElementById(
+          "phaseChip"
+        ).textContent = `PHASE: ${game.phase}`;
+
+        // clear expired shields at render (based on round)
+        for (const p of game.players) {
+          p.shields = p.shields.filter((s) => s.expiresRound >= game.round);
+        }
+      }
+
+      function renderPlayerActionCards() {
+        const wrap = document.getElementById("playerActionCards");
+        wrap.innerHTML = "";
+
+        const aliveMonsters = game.monsters.filter((m) => m.alive);
+        const alivePlayers = game.players.filter((p) => !p.down);
+
+        for (const p of game.players) {
+          const card = document.createElement("div");
+          card.className = "card";
+
+          const title = document.createElement("div");
+          title.className = "row";
+          title.style.justifyContent = "space-between";
+          title.innerHTML = `
+                  <div>
+                    <h3 style="margin:0">${p.name} <small class="mono">(${
+            p.role
+          })</small></h3>
+                    <small>${
+                      p.down
+                        ? `<span class="danger">DOWN</span> (대기 ${p.downCounter})`
+                        : `HP ${p.hp}/${p.maxHp} | CRIT ${critChance(p)}%`
+                    }</small>
+                  </div>
+                  <div class="rightMeta">
+                    <span class="chip">액티브: ${p.actives
+                      .map((k) => skillName(p.role, k))
+                      .join(" / ")}</span>
+                    <span class="chip">궁극: ${skillName(p.role, p.ult)}</span>
+                  </div>
+                `;
+          card.appendChild(title);
+
+          const disabled = game.phase !== "PLAYER" || p.down;
+
+          const actionKey = `action_${p.id}`;
+          const skillKey = `skill_${p.id}`;
+          const t1Key = `t1_${p.id}`;
+          const t2Key = `t2_${p.id}`;
+          const statKey = `stat_${p.id}`;
+
+          card.innerHTML += `
+                  <div class="actionRow">
+                    <div>
+                      <label>행동</label>
+                      <select id="${actionKey}" ${disabled ? "disabled" : ""}>
+                        <option value="ATTACK">공격</option>
+                        <option value="DEFEND">방어</option>
+                        <option value="ACTIVE">액티브</option>
+                        <option value="ULT">궁극기</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>스킬(액티브/궁극기)</label>
+                      <select id="${skillKey}" ${
+            disabled ? "disabled" : ""
+          }></select>
+                    </div>
+                    <div>
+                      <label>대상 1</label>
+                      <select id="${t1Key}" ${
+            disabled ? "disabled" : ""
+          }></select>
+                    </div>
+                    <div>
+                      <label>대상 2 / (필요 시)</label>
+                      <select id="${t2Key}" ${
+            disabled ? "disabled" : ""
+          }></select>
+                    </div>
+                    <div style="grid-column:1 / -1">
+                      <label>격려 스탯 선택(서포터 격려 시)</label>
+                      <select id="${statKey}" ${disabled ? "disabled" : ""}>
+                        <option value="atk">공격</option>
+                        <option value="def">방어</option>
+                        <option value="agi">민첩</option>
+                        <option value="vit">체력</option>
+                      </select>
+                    </div>
+                  </div>
+                `;
+
+          wrap.appendChild(card);
+
+          // fill skill dropdown based on action
+          const actionSel = document.getElementById(actionKey);
+          const skillSel = document.getElementById(skillKey);
+          const t1Sel = document.getElementById(t1Key);
+          const t2Sel = document.getElementById(t2Key);
+          const statSel = document.getElementById(statKey);
+
+          function fillTargets(mode) {
+            // mode: based on selected skill target requirement
+            const allies = game.players.map((x) => ({
+              id: x.id,
+              name: x.name,
+              down: x.down,
+            }));
+            const enemies = game.monsters.map((x) => ({
+              id: x.id,
+              name: x.name,
+              alive: x.alive,
+            }));
+
+            function setOptions(selectEl, options, placeholder) {
+              selectEl.innerHTML = "";
+              const ph = document.createElement("option");
+              ph.value = "";
+              ph.textContent = placeholder;
+              selectEl.appendChild(ph);
+              for (const o of options) {
+                const opt = document.createElement("option");
+                opt.value = o.id;
+                opt.textContent = o.label;
+                selectEl.appendChild(opt);
+              }
+            }
+
+            const allyOpts = allies
+              .filter((a) => !a.down)
+              .map((a) => ({ id: a.id, label: `${a.name}` }));
+
+            const allyAllOpts = allies.map((a) => ({
+              id: a.id,
+              label: `${a.name}${a.down ? " (DOWN)" : ""}`,
+            }));
+
+            const enemyOpts = enemies
+              .filter((e) => e.alive)
+              .map((e) => ({ id: e.id, label: `${e.name}` }));
+
+            if (mode === "ENEMY1") {
+              setOptions(t1Sel, enemyOpts, "몬스터 선택");
+              setOptions(t2Sel, [], "미사용");
+            } else if (mode === "ENEMY_ALL") {
+              setOptions(t1Sel, [{ id: "ALL", label: "전체 몬스터" }], "전체");
+              setOptions(t2Sel, [], "미사용");
+            } else if (mode === "ALLY1") {
+              setOptions(t1Sel, allyOpts, "아군 선택");
+              setOptions(t2Sel, [], "미사용");
+            } else if (mode === "ALLY2") {
+              setOptions(t1Sel, allyOpts, "아군1");
+              setOptions(t2Sel, allyOpts, "아군2");
+            } else if (mode === "ALLY_ALL") {
+              setOptions(t1Sel, [{ id: "ALL", label: "전체 아군" }], "전체");
+              setOptions(t2Sel, [], "미사용");
+            } else if (mode === "ALLY1_STAT") {
+              setOptions(t1Sel, allyOpts, "아군 선택");
+              setOptions(t2Sel, [], "미사용");
+            } else if (mode === "NONE") {
+              setOptions(t1Sel, [], "미사용");
+              setOptions(t2Sel, [], "미사용");
+            } else {
+              // default
+              setOptions(t1Sel, enemyOpts, "대상 선택");
+              setOptions(t2Sel, [], "미사용");
+            }
+
+            statSel.disabled =
+              !(
+                p.role === "SUPPORT" &&
+                skillSel.value === "ENCOURAGE" &&
+                actionSel.value === "ACTIVE"
+              ) || disabled;
+          }
+
+          function fillSkills() {
+            skillSel.innerHTML = "";
+            const action = actionSel.value;
+
+            const opt = (val, txt) => {
+              const o = document.createElement("option");
+              o.value = val;
+              o.textContent = txt;
+              return o;
+            };
+
+            if (action === "ACTIVE") {
+              skillSel.appendChild(opt("", "액티브 선택"));
+              for (const k of p.actives) {
+                skillSel.appendChild(opt(k, skillName(p.role, k)));
+              }
+            } else if (action === "ULT") {
+              skillSel.appendChild(
+                opt(
+                  p.ult,
+                  `${skillName(p.role, p.ult)}${p.ultUsed ? " (사용됨)" : ""}`
+                )
+              );
+            } else {
+              skillSel.appendChild(opt("", "스킬 없음"));
+            }
+
+            // default targets based on selection
+            const targetType = getSkillTargetType(
+              p,
+              actionSel.value,
+              skillSel.value
+            );
+            fillTargets(targetType);
+          }
+
+          actionSel.addEventListener("change", () => fillSkills());
+          skillSel.addEventListener("change", () => {
+            const targetType = getSkillTargetType(
+              p,
+              actionSel.value,
+              skillSel.value
+            );
+            fillTargets(targetType);
+          });
+
+          // initialize from saved action if exists
+          fillSkills();
+
+          const saved = game.actions.get(p.id);
+          if (saved) {
+            actionSel.value = saved.type;
+            fillSkills();
+            if (saved.type === "ACTIVE" || saved.type === "ULT") {
+              if (saved.skillKey) skillSel.value = saved.skillKey;
+            }
+            if (saved.t1) t1Sel.value = saved.t1;
+            if (saved.t2) t2Sel.value = saved.t2;
+            if (saved.stat) statSel.value = saved.stat;
+            // re-evaluate targets for stat selector
+            const targetType = getSkillTargetType(
+              p,
+              actionSel.value,
+              skillSel.value
+            );
+            fillTargets(targetType);
+          }
+
+          // save on any change
+          const save = () => {
+            const a = {
+              type: actionSel.value,
+              skillKey:
+                actionSel.value === "ACTIVE" || actionSel.value === "ULT"
+                  ? skillSel.value
+                  : null,
+              t1: t1Sel.value || null,
+              t2: t2Sel.value || null,
+              stat: statSel.value || "atk",
+            };
+            game.actions.set(p.id, a);
+            updateReadyChip();
+          };
+
+          [actionSel, skillSel, t1Sel, t2Sel, statSel].forEach((el) =>
+            el.addEventListener("change", save)
+          );
+          updateReadyChip();
+        }
+      }
+
+      function updateReadyChip() {
+        const total = game.players.filter((p) => !p.down).length;
+        let ready = 0;
+        for (const p of game.players) {
+          if (p.down) continue;
+          const a = game.actions.get(p.id);
+          if (!a) continue;
+          // minimal validation: ATTACK/DEFEND always ready; ACTIVE needs skillKey; ULT ready even if used (will fail in resolve)
+          if (a.type === "ATTACK" || a.type === "DEFEND") ready++;
+          else if (a.type === "ACTIVE") {
+            if (a.skillKey) ready++;
+          } else if (a.type === "ULT") {
+            ready++;
+          }
+        }
+        document.getElementById(
+          "readyChip"
+        ).textContent = `READY: ${ready}/${total}`;
+      }
+
+      function skillName(role, key) {
+        const pool = [...SKILLS[role].active, ...SKILLS[role].ult];
+        const s = pool.find((x) => x.key === key);
+        return s ? s.name : key;
+      }
+
+      function getSkillTargetType(player, actionType, skillKey) {
+        if (actionType === "ACTIVE") {
+          const s = SKILLS[player.role].active.find((x) => x.key === skillKey);
+          return s ? s.target : "NONE";
+        }
+        if (actionType === "ULT") {
+          const s = SKILLS[player.role].ult.find((x) => x.key === skillKey);
+          return s ? s.target : "NONE";
+        }
+        // attack defaults to ENEMY1
+        if (actionType === "ATTACK") return "ENEMY1";
+        return "NONE";
+      }
+
+      /* =========================
+               Monster Intent
+            ========================= */
+      function chooseMonsterIntent() {
+        const aliveMonsters = game.monsters.filter((m) => m.alive);
+        const alivePlayers = game.players.filter((p) => !p.down);
+
+        if (aliveMonsters.length === 0) return null;
+        if (alivePlayers.length === 0) return null;
+
+        // 어그로가 있는 플레이어 찾기
+        const aggroPlayers = alivePlayers.filter((p) => p.hasAggro);
+        
+        // 어그로 적용 타겟 선택 함수
+        function selectTargetsWithAggro(count) {
+          const selected = [];
+          const available = [...alivePlayers];
+          
+          for (let i = 0; i < count && available.length > 0; i++) {
+            // 어그로가 있는 플레이어가 아직 선택되지 않았다면 50% 확률로 우선 선택
+            const unselectedAggro = aggroPlayers.filter(
+              (ap) => available.includes(ap) && !selected.includes(ap)
+            );
+            
+            if (unselectedAggro.length > 0 && Math.random() < 0.5) {
+              const aggroTarget = unselectedAggro[Math.floor(Math.random() * unselectedAggro.length)];
+              selected.push(aggroTarget);
+              available.splice(available.indexOf(aggroTarget), 1);
+            } else {
+              // 일반 랜덤 선택
+              const idx = Math.floor(Math.random() * available.length);
+              selected.push(available[idx]);
+              available.splice(idx, 1);
+            }
+          }
+          return selected;
+        }
+
+        // choose a monster to act this round (if multiple, all act; intent shows aggregated)
+        // We'll create per-monster intent list, but show summary text.
+        const intents = [];
+
+        for (const m of aliveMonsters) {
+          const r = Math.random();
+          if (r < 0.25) {
+            // 단일 공격 - 어그로 적용
+            const targets = selectTargetsWithAggro(1);
+            const t = targets[0];
+            intents.push({
+              monsterId: m.id,
+              type: "SINGLE",
+              targetIds: [t.id],
+              text: `${m.name}는 ${t.name}(을)를 노려보고 있다. (단일 공격)`,
+            });
+          } else if (r < 0.5) {
+            // 광역공격 1~3인 - 어그로 적용
+            const n = Math.min(
+              alivePlayers.length,
+              Math.floor(Math.random() * 3) + 1
+            );
+            const targets = selectTargetsWithAggro(n);
+            const targetNames = targets.map((t) => t.name).join(", ");
+
+            intents.push({
+              monsterId: m.id,
+              type: "AOE",
+              targetIds: targets.map((x) => x.id),
+              text: `${m.name}는 ${targetNames}(을)를 향해 눈을 굴리고 있다. (광역 ${n}인)`,
+            });
+          } else if (r < 0.75) {
+            // bleeding 1~8 - 어그로 적용
+            const n = Math.min(
+              alivePlayers.length,
+              Math.floor(Math.random() * 8) + 1
+            );
+            const targets = selectTargetsWithAggro(n);
+            const targetNames = targets.map((t) => t.name).join(", ");
+            intents.push({
+              monsterId: m.id,
+              type: "BLEED",
+              targetIds: targets.map((x) => x.id),
+              text: `${targetNames}을(를) 노려보고 있는 ${m.name}의 공격은 출혈을 유발할 것만 같다. (출혈 ${n}인, 3턴 지속, 방어 무시)`,
+            });
+          } else {
+            // self buff
+            const stats = ["atk", "def", "agi"];
+            const s = stats[Math.floor(Math.random() * stats.length)];
+            intents.push({
+              monsterId: m.id,
+              type: "BUFF",
+              buffStat: s,
+              text: `${
+                m.name
+              }는 한발 물러서서 태세를 재정비합니다. (자가버프: ${s.toUpperCase()})`,
+            });
+          }
+        }
+
+        return intents;
+      }
+
+      /* =========================
+               Round Flow
+            ========================= */
+      function startRound() {
+        if (game.players.length === 0) {
+          log("⚠️ 플레이어를 먼저 추가하세요.");
+          return;
+        }
+        if (game.monsters.length === 0) {
+          log("⚠️ 몬스터를 먼저 추가하세요.");
+          return;
+        }
+        if (game.phase !== "HINT" && game.phase !== "RESOLVE") {
+          log(
+            "⚠️ 현재 라운드가 진행 중입니다. (라운드 해석 후 다음 라운드 시작)"
+          );
+          return;
+        }
+
+        // round start: revive counters, apply pending buffs, tick DOT
+        log(`\n=== ROUND ${game.round} START ===`);
+        for (const p of game.players) {
+          reviveIfReady(p);
+        }
+        tickDots();
+
+        // clear per-round flags
+        for (const p of game.players) {
+          p._defendBonus = 0;
+          p.minHpFloor = false;
+          p.tankingAll = false;
+          p.redirect = null; // reset; will be set by skills
+        }
+        for (const m of game.monsters) {
+          // none for now
+        }
+
+        // generate monster intent(s)
+        game.monsterIntents = chooseMonsterIntent();
+        if (!game.monsterIntents) {
+          log("전투를 진행할 수 없습니다. (대상 없음)");
+          return;
+        }
+
+        const hintText = game.monsterIntents
+          .map((x) => "- " + x.text)
+          .join("\n");
+        document.getElementById("hintBox").textContent = hintText;
+        log(`몬스터 행동 암시:\n${hintText}`);
+
+        // phase to PLAYER
+        game.phase = "PLAYER";
+        renderPlayerActionCards();
+        renderStates();
+      }
+
+      function resolveRound() {
+        if (game.phase !== "PLAYER") {
+          log("⚠️ 먼저 '라운드 시작(암시)' 후, 중앙에서 행동을 선택하세요.");
+          return;
+        }
+
+        const alivePlayers = game.players.filter((p) => !p.down);
+        if (alivePlayers.length === 0) {
+          log("⚠️ 행동 가능한 플레이어가 없습니다.");
+          return;
+        }
+
+        // 합산 전 상태 스냅샷 저장 (되돌리기용)
+        saveSnapshot();
+
+        // 라운드 시작 시 HP 저장 (피해량 계산용)
+        for (const p of game.players) {
+          p._hpAtRoundStart = p.hp;
+        }
+        for (const m of game.monsters) {
+          m._hpAtRoundStart = m.hp;
+        }
+
+        // validation: ensure actions exist
+        for (const p of alivePlayers) {
+          if (!game.actions.get(p.id)) {
+            game.actions.set(p.id, {
+              type: "ATTACK",
+              skillKey: null,
+              t1: null,
+              t2: null,
+              stat: "atk",
+            });
+          }
+        }
+
+        game.phase = "RESOLVE";
+        renderStates();
+
+        // 1) Apply player DEFEND bonuses first (so monster damage mitigation works)
+        for (const p of alivePlayers) {
+          const a = game.actions.get(p.id);
+          if (a?.type === "DEFEND") {
+            const bonus = finalStat(p, "def");
+            p._defendBonus = bonus;
+            log(`🛡️ ${p.name} 방어: 추가 경감 ${bonus}`);
+          }
+        }
+
+        // 2) Resolve PLAYER actions (in simple order; you can change to AGI ordering)
+        log(`--- 플레이어 턴 (${alivePlayers.length}인) ---`);
+        for (const p of alivePlayers) {
+          const a = game.actions.get(p.id);
+          resolvePlayerAction(p, a);
+        }
+
+        // 3) Resolve MONSTER actions
+        log(`--- 몬스터 턴 ---`);
+        resolveMonsterActions();
+
+        // 4) End of round: cleanup, decay debuffs, check downs, summary
+        for (const p of game.players) {
+          setDownIfNeeded(p);
+        }
+        decayDebuffsEndRound();
+
+        log(`--- 최종 합산 ---`);
+        summarizeRound();
+
+        // prepare next
+        game.round += 1;
+        game.phase = "HINT";
+        game.actions.clear();
+        game.monsterIntents = null;
+
+        renderPlayerActionCards();
+        renderStates();
+      }
+
+      function summarizeRound() {
+        log(`\n📊 ═══ 라운드 ${game.round} 결과 ═══`);
+
+        // 플레이어 합산
+        log(`\n▶ 플레이어 상태:`);
+        for (const p of game.players) {
+          const startHp = p._hpAtRoundStart ?? p.hp;
+          const damageTaken = Math.max(0, startHp - p.hp);
+          const healed = Math.max(0, p.hp - startHp);
+          const status = p.down ? " [DOWN]" : "";
+          const pct = p.maxHp > 0 ? Math.round((p.hp / p.maxHp) * 100) : 0;
+
+          let changeText = "";
+          if (damageTaken > 0) {
+            changeText = ` (받은 피해: ${damageTaken})`;
+          } else if (healed > 0) {
+            changeText = ` (회복: +${healed})`;
+          }
+
+          log(
+            `   ${p.name}${status}: HP ${p.hp}/${p.maxHp} (${pct}%)${changeText}`
+          );
+        }
+
+        // 몬스터 합산
+        log(`\n▶ 몬스터 상태:`);
+        let totalDamageToMonsters = 0;
+        for (const m of game.monsters) {
+          const startHp = m._hpAtRoundStart ?? m.hp;
+          const damageDealt = Math.max(0, startHp - m.hp);
+          totalDamageToMonsters += damageDealt;
+          const status = m.alive ? "" : " [DEAD]";
+          const pct = m.maxHp > 0 ? Math.round((m.hp / m.maxHp) * 100) : 0;
+
+          let changeText =
+            damageDealt > 0 ? ` (받은 피해: ${damageDealt})` : "";
+
+          log(
+            `   ${m.name}${status}: HP ${m.hp}/${m.maxHp} (${pct}%)${changeText}`
+          );
+        }
+
+        // 총합
+        const aliveM = game.monsters.filter((m) => m.alive).length;
+        const downP = game.players.filter((p) => p.down).length;
+        log(
+          `\n▶ 총합: 몬스터에게 준 피해 ${totalDamageToMonsters} | 몬스터 생존 ${aliveM}/${game.monsters.length} | 플레이어 다운 ${downP}/${game.players.length}`
+        );
+        log(`═══════════════════════════\n`);
+      }
+
+      /* =========================
+               Player Action Resolution
+            ========================= */
+      function resolvePlayerAction(p, a) {
+        if (!a)
+          a = {
+            type: "ATTACK",
+            skillKey: null,
+            t1: null,
+            t2: null,
+            stat: "atk",
+          };
+
+        if (a.type === "ATTACK") {
+          const target = pickMonsterById(a.t1) || firstAliveMonster();
+          if (!target) {
+            log(`⚠️ ${p.name} 공격 실패: 대상 없음`);
+            return;
+          }
+          doAttack(p, target, {
+            mult: 1.0,
+            ignoreDefense: false,
+            label: "기본공격",
+          });
+          p.lastActiveKey = null; // 기본공격 시 액티브 연속 사용 체크 리셋
+          return;
+        }
+
+        if (a.type === "DEFEND") {
+          // already applied bonus; nothing else
+          p.lastActiveKey = null; // 방어 시 액티브 연속 사용 체크 리셋
+          return;
+        }
+
+        if (a.type === "ACTIVE") {
+          const key = a.skillKey;
+          if (!key) {
+            log(`⚠️ ${p.name} 액티브 미선택 → 기본공격으로 대체`);
+            const target = firstAliveMonster();
+            if (target) doAttack(p, target, { mult: 1.0, label: "기본공격" });
+            p.lastActiveKey = null; // 기본공격으로 대체 시에도 리셋
+            return;
+          }
+          // consecutive active check
+          if (p.lastActiveKey === key) {
+            log(
+              `⚠️ ${p.name} 액티브 연속 사용 불가(${skillName(
+                p.role,
+                key
+              )}) → 기본공격으로 대체`
+            );
+            const target = firstAliveMonster();
+            if (target) doAttack(p, target, { mult: 1.0, label: "기본공격" });
+            p.lastActiveKey = null; // 연속 사용 실패 시에도 리셋
+            return;
+          }
+          resolveSkill(p, "ACTIVE", key, a);
+          p.lastActiveKey = key;
+          return;
+        }
+
+        if (a.type === "ULT") {
+          const key = p.ult;
+          if (p.ultUsed) {
+            log(
+              `⚠️ ${p.name} 궁극기(${skillName(
+                p.role,
+                key
+              )})는 이미 사용됨 → 기본공격으로 대체`
+            );
+            const target = firstAliveMonster();
+            if (target) doAttack(p, target, { mult: 1.0, label: "기본공격" });
+            p.lastActiveKey = null; // 궁극기 실패 시에도 리셋
+            return;
+          }
+          resolveSkill(p, "ULT", key, a);
+          p.ultUsed = true;
+          p.lastActiveKey = null; // 궁극기 사용 시 액티브 연속 사용 체크 리셋
+          return;
+        }
+      }
+
+      function doAttack(
+        attacker,
+        target,
+        {
+          mult = 1.0,
+          ignoreDefense = false,
+          label = "공격",
+          diceTwice = false,
+          diceSum = false,
+          fixed = null,
+        } = {}
+      ) {
+        if (target.type === "MONSTER" && !target.alive) {
+          log(`⚠️ ${attacker.name} ${label}: 대상 ${target.name}은 이미 사망`);
+          return;
+        }
+        let raw = 0;
+        let atkFormula = "";
+
+        if (fixed !== null) {
+          raw = fixed;
+          atkFormula = `고정 피해 ${fixed}`;
+        } else {
+          if (diceTwice) {
+            const atk = effectiveStat(attacker, "atk");
+            const r1 = d6(),
+              r2 = d6();
+            const base = atk * r1 + atk * r2;
+            raw = base;
+            atkFormula = `공격 ${atk}×${r1}(1d6) + ${atk}×${r2}(1d6)=${base}`;
+          } else {
+            const atkResult = baseAttackDamage(attacker);
+            raw = atkResult.damage;
+            atkFormula = `공격 ${atkResult.atk}×${atkResult.roll}(1d6)=${raw}`;
+          }
+        }
+
+        if (mult !== 1.0) {
+          const beforeMult = raw;
+          raw = raw * mult;
+          atkFormula += ` ×${mult}=${Math.floor(raw)}`;
+        }
+
+        // crit
+        const c = pct(critChance(attacker));
+        if (c && fixed === null) {
+          // fixed damage does not crit
+          raw = raw * 2;
+          atkFormula += ` ×2(치명타)=${Math.floor(raw)}`;
+          log(`✨ CRIT! ${attacker.name} (${label})`);
+        }
+
+        raw = Math.floor(raw);
+
+        const res = applyDamage(target, raw, { ignoreDefense });
+
+        let logMsg = `🗡️ ${attacker.name} → ${target.name} (${label})\n`;
+        logMsg += `   [${atkFormula}]`;
+        if (!ignoreDefense && res.defFormula) {
+          logMsg += `\n   [${res.defFormula}]`;
+        }
+        if (ignoreDefense) {
+          logMsg += ` (방어 무시)`;
+        }
+        logMsg += `\n   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+        log(logMsg);
+
+        // if attacker is tank with ENDURE active, we count damage taken not dealt; handled elsewhere.
+      }
+
+      /* =========================
+               Skills
+            ========================= */
+      function resolveSkill(p, type, key, a) {
+        // Pre-checks: targets existence
+        const role = p.role;
+
+        if (role === "TANK") {
+          if (type === "ULT" && key === "UNYIELDING") {
+            // all incoming damage + debuffs -> tank; hp floor 1
+            p.tankingAll = true;
+            p.minHpFloor = true;
+            log(
+              `🛡️ ${p.name} 궁극기 발동: 불굴 (1턴 전체 대신 받음, HP 1 미만 불가)`
+            );
+            return;
+          }
+          if (type === "ULT" && key === "DEVOTION") {
+            const def = effectiveStat(p, "def");
+            const roll = d6();
+            const dmg = def * roll * 2;
+            log(
+              `💥 ${p.name} 궁극기 발동: 헌신\n   [방어 ${def}×${roll}(1d6)×2=${dmg}] 자신 HP 전부 소모 후 적 전체 공격`
+            );
+            // attack first, then drop
+            for (const m of game.monsters.filter((m) => m.alive)) {
+              const res = applyDamage(m, dmg, { ignoreDefense: false });
+              let logMsg = `   ↳ ${m.name}`;
+              if (res.defFormula) logMsg += ` [${res.defFormula}]`;
+              logMsg += ` 피해 ${dmg}, 실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated}`;
+              log(logMsg);
+            }
+            p.hp = 0;
+            setDownIfNeeded(p);
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "GUARD") {
+            const t1 = pickPlayerById(a.t1);
+            const t2 = pickPlayerById(a.t2);
+            const targets = [t1, t2].filter(
+              (x) => x && !x.down && x.id !== p.id
+            );
+            if (targets.length === 0) {
+              log(`⚠️ ${p.name} 호위 실패: 대상 없음 → 기본공격`);
+              const m = firstAliveMonster();
+              if (m) doAttack(p, m, { label: "기본공격" });
+              return;
+            }
+            const def = effectiveStat(p, "def");
+            const roll = d6();
+            const fDef = def * roll;
+            let baseShield = Math.floor(fDef * 0.5);
+            let shield = baseShield;
+            let critText = "";
+            
+            // 크리티컬 체크
+            if (pct(critChance(p))) {
+              shield = shield * 2;
+              critText = ` ×2(치명타)=${shield}`;
+              log(`✨ CRIT! ${p.name} (호위)`);
+            }
+            
+            log(
+              `🛡️ ${p.name} 호위 발동\n   [방어 ${def}×${roll}(1d6)×0.5=${baseShield}${critText} 보호막]`
+            );
+            for (const t of targets) {
+              // no stacking same active: just add shield but you can choose to overwrite; here we add.
+              t.shields.push({ value: shield, expiresRound: game.round });
+              log(
+                `   ↳ ${t.name}에게 보호막 ${shield} 부여 (R${game.round}까지)`
+              );
+            }
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "PROTECT") {
+            const ally = pickPlayerById(a.t1);
+            if (!ally || ally.down || ally.id === p.id) {
+              log(`⚠️ ${p.name} 수호 실패: 유효 아군 없음 → 기본공격`);
+              const m = firstAliveMonster();
+              if (m) doAttack(p, m, { label: "기본공격" });
+              return;
+            }
+
+            // 크리티컬 체크 - 방어 배율 증가
+            let defMult = 1.3;
+            let critText = "";
+            if (pct(critChance(p))) {
+              defMult = 2.6; // 1.3 × 2
+              critText = " (치명타! 방어 2.6배)";
+              log(`✨ CRIT! ${p.name} (수호)`);
+            }
+
+            // "이번 턴"만 유효한 풀 리다이렉트
+            ally.redirect = {
+              tankId: p.id,
+              mode: "FULL",
+              defMult: defMult,
+              expiresRound: game.round, // 선택: 라운드 종료 시 정리할 때 쓰기 좋음
+            };
+
+            log(
+              `🛡️ ${p.name} 수호 → ${ally.name} : 이번 턴 몬스터 공격/효과를 ${p.name}이 대신 받음 (방어 ${defMult}배)${critText}`
+            );
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "ENDURE") {
+            p.endure = { accum: 0, turnsLeft: 3 };
+            p.hasAggro = true; // 어그로 증가 (50% 확률로 타겟에 포함)
+            log(
+              `🧱 ${p.name} 인내 시작: 3턴 누적 피해의 0.5 반사(랜덤 몬스터, 어그로 증가)`
+            );
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "FIGHTING_SPIRIT") {
+            const m = pickMonsterById(a.t1) || firstAliveMonster();
+            if (!m) {
+              log(`⚠️ ${p.name} 투혼 실패: 대상 없음 → 기본공격`);
+              const mm = firstAliveMonster();
+              if (mm) doAttack(p, mm, { label: "기본공격" });
+              return;
+            }
+            p.fightingSpirit = { targetId: m.id, turnsLeft: 2 };
+            log(
+              `🔥 ${p.name} 투혼 시작: 2턴간 DEF -5, 매 턴 ${m.name}에게 고정 100`
+            );
+            // immediate tick this turn
+            const target = pickMonsterById(p.fightingSpirit.targetId);
+            if (target && target.alive) {
+              doAttack(p, target, {
+                fixed: 50,
+                label: "투혼(고정)",
+                ignoreDefense: false,
+              });
+            }
+            return;
+          }
+        }
+
+        if (role === "DPS") {
+          if (type === "ULT" && key === "MERCY") {
+            const m = pickMonsterById(a.t1) || firstAliveMonster();
+            if (!m) {
+              log(`⚠️ ${p.name} 자비 실패: 대상 없음`);
+              return;
+            }
+            // attack dice twice sum then *2
+            doAttack(p, m, { diceTwice: true, mult: 2.0, label: "자비" });
+            return;
+          }
+          if (type === "ULT" && key === "CHARGE") {
+            const m = pickMonsterById(a.t1) || firstAliveMonster();
+            if (!m) {
+              log(`⚠️ ${p.name} 돌격 실패: 대상 없음`);
+              return;
+            }
+            doAttack(p, m, {
+              mult: 1.5,
+              ignoreDefense: true,
+              diceTwice: true,
+              label: "돌격(방어무시)",
+            });
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "MADNESS") {
+            p.pendingAtkPlusNext += 2;
+            log(
+              `😈 ${p.name} 광기: 다음 턴 공격 +2 (누적 ${p.pendingAtkPlusNext})`
+            );
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "OBSESSION") {
+            const m = pickMonsterById(a.t1) || firstAliveMonster();
+            if (!m) {
+              log(`⚠️ ${p.name} 집념 실패: 대상 없음`);
+              return;
+            }
+            const atkResult = baseAttackDamage(p);
+            const dotVal = Math.floor(atkResult.damage * 0.5);
+            addDot(m, {
+              type: "OBSESSION",
+              value: dotVal,
+              turns: 3,
+              sourceId: p.id,
+            });
+            log(
+              `🩸 ${p.name} 집념 → ${m.name}\n   [공격 ${atkResult.atk}×${atkResult.roll}(1d6)×0.5=${dotVal}] DOT ${dotVal}/턴 ×3턴 (중첩 가능)`
+            );
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "BLOODFIGHT") {
+            const m = pickMonsterById(a.t1) || firstAliveMonster();
+            if (!m) {
+              log(`⚠️ ${p.name} 혈투 실패: 대상 없음`);
+              return;
+            }
+            const cost = Math.ceil(p.hp * 0.5);
+            p.hp = Math.max(0, p.hp - cost);
+            log(`🩸 ${p.name} 혈투: HP ${cost} 소모`);
+            setDownIfNeeded(p);
+            if (p.down) {
+              log(`⚠️ ${p.name} 혈투 후 다운되어 공격 불발`);
+              return;
+            }
+            doAttack(p, m, { mult: 1.5, label: "혈투" });
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "MASSACRE") {
+            const atk = effectiveStat(p, "atk");
+            const roll = d6();
+            const fAtk = atk * roll;
+            const dmg = Math.floor(fAtk * 1);
+            log(
+              `⚔️ ${p.name} 참살: 적 전체 공격\n   [공격 ${atk}×${roll}(1d6)=${dmg}]`
+            );
+            for (const mm of game.monsters.filter((x) => x.alive)) {
+              const res = applyDamage(mm, dmg, { ignoreDefense: false });
+              let logMsg = `   ↳ ${mm.name}`;
+              if (res.defFormula) logMsg += ` [${res.defFormula}]`;
+              logMsg += ` 피해 ${dmg}, 실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated}`;
+              log(logMsg);
+            }
+            return;
+          }
+        }
+
+        if (role === "SUPPORT") {
+          if (type === "ULT" && key === "REINCARNATION") {
+            const ally = pickPlayerById(a.t1);
+            if (!ally) {
+              log(`⚠️ ${p.name} 윤회 실패: 대상 없음`);
+              return;
+            }
+            ally.ultUsed = false;
+            log(`🔄 ${p.name} 윤회 → ${ally.name} 궁극기 사용 가능으로 초기화`);
+            return;
+          }
+          if (type === "ULT" && key === "REST") {
+            log(`🌿 ${p.name} 안식: 전체 회복 + 다운 대기 제거 + 전체 액티브 재사용 초기화`);
+            for (const ally of game.players) {
+              // revive downed immediately to full
+              ally.down = false;
+              ally.downCounter = 0;
+              ally.hp = ally.maxHp;
+              // 전체 액티브 연속 사용 제한 해제
+              ally.lastActiveKey = null;
+            }
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "REVIVE") {
+            const ally = pickPlayerById(a.t1);
+            if (!ally) {
+              log(`⚠️ ${p.name} 회생 실패: 대상 없음`);
+              return;
+            }
+            const agi = effectiveStat(p, "agi");
+            const roll = d6();
+            let amount = agi * roll;
+            let critText = "";
+            
+            // 크리티컬 체크
+            if (pct(critChance(p))) {
+              amount = amount * 2;
+              critText = " ×2(치명타)";
+              log(`✨ CRIT! ${p.name} (회생)`);
+            }
+            
+            const healed = heal(ally, Math.floor(amount));
+            log(
+              `💚 ${p.name} 회생 → ${ally.name}\n   [민첩 ${agi}×${roll}(1d6)=${agi * roll}${critText}] 실제 회복 ${healed}`
+            );
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "BLESS") {
+            const a1 = pickPlayerById(a.t1);
+            const a2 = pickPlayerById(a.t2);
+            const targets = [a1, a2].filter((x) => x);
+            if (targets.length === 0) {
+              log(`⚠️ ${p.name} 가호 실패: 대상 없음`);
+              return;
+            }
+            const agi = effectiveStat(p, "agi");
+            const roll = d6();
+            let baseAmount = Math.floor(agi * roll * 0.5);
+            let amount = baseAmount;
+            let critText = "";
+            
+            // 크리티컬 체크
+            if (pct(critChance(p))) {
+              amount = amount * 2;
+              critText = ` ×2(치명타)=${amount}`;
+              log(`✨ CRIT! ${p.name} (가호)`);
+            }
+            
+            log(
+              `💚 ${p.name} 가호 발동\n   [민첩 ${agi}×${roll}(1d6)×0.5=${baseAmount}${critText}]`
+            );
+            for (const t of targets) {
+              const healed = heal(t, amount);
+              log(`   ↳ ${t.name} 실제 회복 ${healed}`);
+            }
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "ENCOURAGE") {
+            const ally = pickPlayerById(a.t1);
+            if (!ally) {
+              log(`⚠️ ${p.name} 격려 실패: 대상 없음`);
+              return;
+            }
+            const stat = a.stat || "atk";
+            // 다음 턴에 적용되도록 pendingEncourage에 추가
+            if (!ally.pendingEncourage) ally.pendingEncourage = [];
+            ally.pendingEncourage.push({
+              stat: stat,
+              value: 2,
+              sourceId: p.id,
+            });
+            log(
+              `📣 ${p.name} 격려 → ${
+                ally.name
+              } ${stat.toUpperCase()} +2 (다음 턴 적용)`
+            );
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "PURIFY") {
+            const a1 = pickPlayerById(a.t1);
+            const a2 = pickPlayerById(a.t2);
+            const targets = [a1, a2].filter((x) => x);
+            if (targets.length === 0) {
+              log(`⚠️ ${p.name} 정화 실패: 대상 없음`);
+              return;
+            }
+            for (const t of targets) {
+              clearDebuffs(t);
+              t.dots = [];
+              log(`✨ ${p.name} 정화 → ${t.name} 디버프/DOT 해제`);
+            }
+            return;
+          }
+
+          if (type === "ACTIVE" && key === "PENANCE") {
+            const m = pickMonsterById(a.t1) || firstAliveMonster();
+            if (!m) {
+              log(`⚠️ ${p.name} 참회 실패: 대상 없음`);
+              return;
+            }
+            const agi = effectiveStat(p, "agi");
+            const roll = d6();
+            let baseVal = Math.floor(agi * roll * 0.5);
+            let val = baseVal;
+            let critText = "";
+            
+            // 크리티컬 체크
+            if (pct(critChance(p))) {
+              val = val * 2;
+              critText = ` ×2(치명타)=${val}`;
+              log(`✨ CRIT! ${p.name} (참회)`);
+            }
+            
+            const ok = addDebuff(m, {
+              type: "PENANCE",
+              value: val,
+              turns: 1,
+              sourceId: p.id,
+            });
+            if (ok) {
+              log(
+                `🕯️ ${p.name} 참회 → ${m.name}\n   [민첩 ${agi}×${roll}(1d6)×0.5=${baseVal}${critText}] 공격 -${val} (1턴, 중첩불가)`
+              );
+            } else {
+              log(`⚠️ ${p.name} 참회 실패: 이미 적용 중 (중첩불가)`);
+            }
+            return;
+          }
+        }
+
+        // fallback
+        log(`⚠️ ${p.name} 스킬 처리 미구현(${key}) → 기본공격`);
+        const target = firstAliveMonster();
+        if (target) doAttack(p, target, { label: "기본공격" });
+      }
+
+      /* =========================
+               Monster Action Resolution
+            ========================= */
+      function resolveMonsterActions() {
+        const intents = game.monsterIntents || [];
+        for (const intent of intents) {
+          const m = game.monsters.find((x) => x.id === intent.monsterId);
+          if (!m || !m.alive) continue;
+
+          // apply buff intent
+          if (intent.type === "BUFF") {
+            const inc = d5();
+            const stat = intent.buffStat;
+
+            m.buffs.push({
+              stat,
+              value: inc,
+              turns: 2,
+            });
+
+            log(`⬆️ ${m.name} 자가버프: ${stat.toUpperCase()} +${inc} (2턴)`);
+            continue;
+          }
+
+          // compute base damage scale
+          // single: atk*1d6*2
+          // aoe: atk*1d6 (각 대상)
+          // bleed: apply DOT 1d10 x3턴 (각 대상)
+          const targets = (intent.targetIds || [])
+            .map((id) => pickPlayerById(id))
+            .filter((x) => x);
+
+          if (intent.type === "SINGLE") {
+            const t = targets[0] || randomAlivePlayer();
+            if (!t) {
+              continue;
+            }
+            const atk = effectiveStat(m, "atk");
+            const roll = d6();
+            const baseRaw = atk * roll * 2;
+            const raw = applyDebuffsToMonsterAttack(m, baseRaw);
+            const atkFormula = `공격 ${atk}×${roll}(1d6)×2=${baseRaw}${
+              raw !== baseRaw ? ` (참회 적용 후 ${raw})` : ""
+            }`;
+            dealMonsterDamage(m, t, raw, { label: "단일공격", atkFormula });
+            continue;
+          }
+
+          if (intent.type === "AOE") {
+            const targets = intent.targetIds
+              .map((id) => game.players.find((p) => p.id === id))
+              .filter(Boolean);
+
+            // 수호로 인해 이미 피해를 받은 플레이어 추적
+            const alreadyDamaged = new Set();
+
+            for (const t of targets) {
+              if (t.down) continue;
+
+              // 수호 체크: 수호 대상이면 탱커가 대신 맞음
+              let actualTarget = t;
+              if (t.redirect && t.redirect.mode === "FULL") {
+                const tank = pickPlayerById(t.redirect.tankId);
+                if (tank && !tank.down) {
+                  actualTarget = tank;
+                }
+              }
+
+              // 이미 이번 AOE에서 피해를 받은 대상이면 스킵
+              if (alreadyDamaged.has(actualTarget.id)) {
+                log(
+                  `🛡️ ${t.name}에 대한 공격은 ${actualTarget.name}이 이미 대신 받음 (중복 피해 방지)`
+                );
+                continue;
+              }
+
+              alreadyDamaged.add(actualTarget.id);
+
+              const atk = effectiveStat(m, "atk");
+              const roll = d6();
+              const baseRaw = atk * roll;
+              const raw = applyDebuffsToMonsterAttack(m, baseRaw);
+              const atkFormula = `공격 ${atk}×${roll}(1d6)=${baseRaw}${
+                raw !== baseRaw ? ` (참회 적용 후 ${raw})` : ""
+              }`;
+              dealMonsterDamage(m, t, raw, { label: "광역공격", atkFormula });
+            }
+            continue;
+          }
+
+          if (intent.type === "BLEED") {
+            const targets = intent.targetIds
+              .map((id) => game.players.find((p) => p.id === id))
+              .filter(Boolean);
+
+            for (const t of targets) {
+              if (t.down) continue;
+
+              // 수호 체크: 수호 대상이면 탱커에게 DOT 적용
+              let dotTarget = t;
+              let redirected = false;
+              if (t.redirect && t.redirect.mode === "FULL") {
+                const tank = pickPlayerById(t.redirect.tankId);
+                if (tank && !tank.down) {
+                  dotTarget = tank;
+                  redirected = true;
+                }
+              }
+
+              const atk = effectiveStat(m, "atk");
+              const roll = Math.floor(Math.random() * 2) + 1; // 1d2
+              const dotValue = atk * roll;
+
+              addDot(dotTarget, {
+                type: "BLEED",
+                value: dotValue,
+                turns: 3,
+                sourceId: m.id,
+              });
+
+              const atkFormula = `공격 ${atk}×${roll}(1d2)=${dotValue}`;
+              if (redirected) {
+                log(
+                  `🩸 ${m.name}의 출혈 공격 → ${t.name} (수호: ${dotTarget.name}이 대신 받음)\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
+                );
+              } else {
+                log(
+                  `🩸 ${m.name}의 출혈 공격 → ${dotTarget.name}\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
+                );
+              }
+            }
+            continue;
+          }
+        }
+
+        // tank passive ENDURE tick down & reflect if completed
+        for (const p of game.players) {
+          if (p.endure) {
+            p.endure.turnsLeft -= 1;
+            if (p.endure.turnsLeft <= 0) {
+              const dmg = Math.floor(p.endure.accum * 0.5);
+              const target = firstAliveMonster();
+              if (target && dmg > 0) {
+                const res = applyDamage(target, dmg, { ignoreDefense: true });
+                log(
+                  `🧱 ${p.name} 인내 반사: ${target.name}\n   [누적 ${p.endure.accum}×0.5=${dmg}] 피해 ${dmg} (방어 무시, 실제 ${res.dealt})`
+                );
+              } else {
+                log(`🧱 ${p.name} 인내 종료: 반사 피해 없음`);
+              }
+              p.endure = null;
+              p.hasAggro = false; // 어그로 제거
+            }
+          }
+        }
+
+        // fighting spirit second tick if active (we already ticked when cast, so here tick if still active for next turns)
+        for (const p of game.players) {
+          if (p.fightingSpirit) {
+            p.fightingSpirit.turnsLeft -= 1;
+            if (p.fightingSpirit.turnsLeft > 0) {
+              const target = pickMonsterById(p.fightingSpirit.targetId);
+              if (target && target.alive && !p.down) {
+                doAttack(p, target, {
+                  fixed: 100,
+                  label: "투혼(고정)",
+                  ignoreDefense: false,
+                });
+              }
+            } else {
+              log(`🔥 ${p.name} 투혼 종료`);
+              p.fightingSpirit = null;
+            }
+          }
+        }
+      }
+
+      function dealMonsterDamage(
+        monster,
+        target,
+        raw,
+        { label = "", atkFormula = "" } = {}
+      ) {
+        // 1) 불굴(전체 대신맞기)
+        const tankAll = game.players.find((p) => p.tankingAll && !p.down);
+        if (tankAll) {
+          const res = applyDamage(tankAll, raw, {
+            ignoreDefense: false,
+            allowFloor: tankAll.minHpFloor,
+            defMult: 1.0,
+          });
+
+          let logMsg = `👹 ${monster.name} → ${tankAll.name} (${label}, 불굴 대신받음)\n`;
+          if (atkFormula) logMsg += `   [${atkFormula}]\n`;
+          if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
+          logMsg += `   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+          log(logMsg);
+
+          if (tankAll.endure) tankAll.endure.accum += res.dealt;
+          setDownIfNeeded(tankAll);
+          return;
+        }
+
+        // 2) 수호(FULL redirect)
+        if (
+          target &&
+          !target.down &&
+          target.redirect &&
+          target.redirect.mode === "FULL"
+        ) {
+          const tank = pickPlayerById(target.redirect.tankId);
+          if (tank && !tank.down) {
+            const defMult = target.redirect.defMult ?? 1.3;
+
+            const res = applyDamage(tank, raw, {
+              ignoreDefense: false,
+              allowFloor: tank.minHpFloor,
+              defMult, // ← 수호의 핵심: 방어 1.3배
+            });
+
+            let logMsg = `👹 ${monster.name} → ${target.name} (${label}, 수호: ${tank.name}이 대신받음)\n`;
+            if (atkFormula) logMsg += `   [${atkFormula}]\n`;
+            if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
+            logMsg += `   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+            log(logMsg);
+
+            if (tank.endure) tank.endure.accum += res.dealt;
+            setDownIfNeeded(tank);
+            return; // ★ 피해 대상자(target)는 여기서 아무 피해도 받지 않음
+          }
+          // 탱커가 없거나 다운이면 fallback으로 원래 대상이 맞음
+        }
+
+        // 3) 기본: 원래 대상이 맞음
+        const res = applyDamage(target, raw, {
+          ignoreDefense: false,
+          allowFloor: target.minHpFloor,
+          defMult: 1.0,
+        });
+
+        let logMsg = `👹 ${monster.name} → ${target.name} (${label})\n`;
+        if (atkFormula) logMsg += `   [${atkFormula}]\n`;
+        if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
+        logMsg += `   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+        log(logMsg);
+
+        if (target.endure) target.endure.accum += res.dealt;
+        setDownIfNeeded(target);
+      }
+
+      /* =========================
+               Target helpers
+            ========================= */
+      function pickPlayerById(id) {
+        return game.players.find((p) => p.id === id);
+      }
+      function pickMonsterById(id) {
+        return game.monsters.find((m) => m.id === id);
+      }
+      function firstAliveMonster() {
+        return game.monsters.find((m) => m.alive);
+      }
+      function randomAlivePlayer() {
+        const alive = game.players.filter((p) => !p.down);
+        if (alive.length === 0) return null;
+        return alive[Math.floor(Math.random() * alive.length)];
+      }
+
+      /* =========================
+               Character Creation UI
+            ========================= */
+      function populateSkillSelectors() {
+        const roleSel = document.getElementById("pRole");
+        const a1 = document.getElementById("pActive1");
+        const a2 = document.getElementById("pActive2");
+        const u = document.getElementById("pUlt");
+
+        function fill() {
+          const role = roleSel.value;
+          a1.innerHTML = "";
+          a2.innerHTML = "";
+          u.innerHTML = "";
+
+          for (const s of SKILLS[role].active) {
+            const o1 = document.createElement("option");
+            o1.value = s.key;
+            o1.textContent = `${s.name} - ${s.desc}`;
+            const o2 = o1.cloneNode(true);
+            a1.appendChild(o1);
+            a2.appendChild(o2);
+          }
+          for (const s of SKILLS[role].ult) {
+            const ou = document.createElement("option");
+            ou.value = s.key;
+            ou.textContent = `${s.name} - ${s.desc}`;
+            u.appendChild(ou);
+          }
+        }
+        roleSel.addEventListener("change", fill);
+        fill();
+      }
+
+      function updateSumHint() {
+        const vit = +document.getElementById("pVit").value;
+        const atk = +document.getElementById("pAtk").value;
+        const def = +document.getElementById("pDef").value;
+        const agi = +document.getElementById("pAgi").value;
+        const sum = vit + atk + def + agi;
+        const el = document.getElementById("sumHint");
+        if (sum === 28) {
+          el.textContent = `스탯 총합 ${sum} (OK)`;
+          el.className = "ok";
+        } else {
+          el.textContent = `스탯 총합 ${sum} (패시브 포함 28)`;
+          el.className = "warn";
+        }
+      }
+
+      /* =========================
+               Buff cleanup (ENCOURAGE & MADNESS)
+               We used debuff markers ENCOURAGE_* and MADNESS_* to remove their stat bonus at end of round.
+               This is handled by decayDebuffsEndRound, but we must also revert temp stat.
+            ========================= */
+      const _oldDecay = decayDebuffsEndRound;
+      decayDebuffsEndRound = function () {
+        // Before decrement removal, find expiring ENCOURAGE and MADNESS debuffs and revert
+        for (const p of game.players) {
+          for (const d of p.debuffs) {
+            // 격려 종료 처리
+            if (d.type.startsWith("ENCOURAGE_") && d.turns === 1) {
+              const stat = d.type.replace("ENCOURAGE_", "").toLowerCase(); // atk/def/agi/vit
+              const plusKey = stat + "Plus";
+              p.temp[plusKey] = Math.max(0, (p.temp[plusKey] || 0) - d.value);
+              log(`⏳ 격려 종료: ${p.name} ${stat.toUpperCase()} -${d.value}`);
+            }
+            // 광기 종료 처리
+            if (d.type === "MADNESS_ATK" && d.turns === 1) {
+              p.temp.atkPlus = Math.max(0, (p.temp.atkPlus || 0) - d.value);
+              log(`⏳ 광기 종료: ${p.name} ATK -${d.value}`);
+            }
+          }
+        }
+        _oldDecay();
+      };
+
+      /* =========================
+               Wire UI Events
+            ========================= */
+      populateSkillSelectors();
+
+      ["pVit", "pAtk", "pDef", "pAgi"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", updateSumHint);
+      });
+      updateSumHint();
+
+      document.getElementById("addPlayerBtn").addEventListener("click", () => {
+        if (game.players.length >= 8) {
+          log("⚠️ 플레이어는 최대 8명입니다.");
+          return;
+        }
+        const name =
+          (document.getElementById("pName").value || "").trim() ||
+          `Player${game.players.length + 1}`;
+        const role = document.getElementById("pRole").value;
+        const vit = clamp(+document.getElementById("pVit").value, 1, 12);
+        const atk = clamp(+document.getElementById("pAtk").value, 1, 12);
+        const def = clamp(+document.getElementById("pDef").value, 1, 12);
+        const agi = clamp(+document.getElementById("pAgi").value, 1, 12);
+
+        const a1 = document.getElementById("pActive1").value;
+        const a2 = document.getElementById("pActive2").value;
+        const ult = document.getElementById("pUlt").value;
+
+        if (a1 === a2) {
+          log(
+            "⚠️ 액티브 2개는 서로 다른 스킬을 선택하는 것을 권장합니다. (동일 선택도 일단 허용)"
+          );
+        }
+
+        const p = makePlayer({
+          name,
+          role,
+          vit,
+          atk,
+          def,
+          agi,
+          actives: [a1, a2],
+          ult,
+        });
+        game.players.push(p);
+        log(`+ 플레이어 추가: ${p.name} (${p.role}) HP ${p.maxHp}`);
+        renderPlayerActionCards();
+        renderStates();
+      });
+
+      document
+        .getElementById("clearPlayersBtn")
+        .addEventListener("click", () => {
+          game.players = [];
+          game.actions.clear();
+          log("플레이어 초기화");
+          renderPlayerActionCards();
+          renderStates();
+        });
+
+      document.getElementById("addMonsterBtn").addEventListener("click", () => {
+        if (game.monsters.length >= 4) {
+          log("⚠️ 몬스터는 최대 4마리입니다.");
+          return;
+        }
+        const name =
+          (document.getElementById("mName").value || "").trim() ||
+          `MONSTER${game.monsters.length + 1}`;
+        const hpBase = clamp(
+          +document.getElementById("mHpBase").value,
+          50,
+          5000
+        );
+        const vit = clamp(+document.getElementById("mVit").value, 1, 20);
+        const atk = clamp(+document.getElementById("mAtk").value, 1, 20);
+        const def = clamp(+document.getElementById("mDef").value, 1, 20);
+        const agi = clamp(+document.getElementById("mAgi").value, 1, 20);
+
+        const m = makeMonster({ name, vit, atk, def, agi, hpBase });
+        game.monsters.push(m);
+        log(`+ 몬스터 추가: ${m.name} HP ${m.maxHp}`);
+        renderPlayerActionCards();
+        renderStates();
+      });
+
+      document
+        .getElementById("clearMonstersBtn")
+        .addEventListener("click", () => {
+          game.monsters = [];
+          log("몬스터 초기화");
+          renderPlayerActionCards();
+          renderStates();
+        });
+
+      document
+        .getElementById("startRoundBtn")
+        .addEventListener("click", startRound);
+      document
+        .getElementById("resolveBtn")
+        .addEventListener("click", resolveRound);
+      document
+        .getElementById("undoBtn")
+        .addEventListener("click", undoRound);
+
+      document
+        .getElementById("resetBattleBtn")
+        .addEventListener("click", () => {
+          game.round = 1;
+          game.phase = "HINT";
+          game.monsterIntents = null;
+          game.actions.clear();
+          gameSnapshot = null; // 스냅샷 초기화
+
+          // reset hp and states
+          for (const p of game.players) {
+            p.hp = p.maxHp;
+            p.down = false;
+            p.downCounter = 0;
+            p.ultUsed = false;
+            p.lastActiveKey = null;
+            p.shields = [];
+            p.debuffs = [];
+            p.dots = [];
+            p.redirect = null;
+            p.tankingAll = false;
+            p.minHpFloor = false;
+            p._defendBonus = 0;
+            p.endure = null;
+            p.fightingSpirit = null;
+            p.pendingAtkPlusNext = 0;
+            p.pendingEncourage = [];
+            p.hasAggro = false; // 어그로 초기화
+            p.temp = { atkPlus: 0, defPlus: 0, agiPlus: 0, vitPlus: 0 };
+          }
+          for (const m of game.monsters) {
+            m.hp = m.maxHp;
+            m.alive = true;
+            m.debuffs = [];
+            m.dots = [];
+            m.shields = [];
+            m.temp = { atkPlus: 0, defPlus: 0, agiPlus: 0, vitPlus: 0 };
+          }
+
+          log("\n=== 전투 리셋 ===");
+          document.getElementById("hintBox").textContent =
+            "라운드 시작 버튼을 눌러 암시를 생성하세요.";
+          renderPlayerActionCards();
+          renderStates();
+        });
+
+      document.getElementById("autoFillBtn").addEventListener("click", () => {
+        if (game.phase !== "PLAYER") {
+          log("⚠️ 자동 입력은 PLAYER 단계에서만 가능합니다.");
+          return;
+        }
+        const m = firstAliveMonster();
+        for (const p of game.players) {
+          if (p.down) continue;
+          game.actions.set(p.id, {
+            type: "ATTACK",
+            skillKey: null,
+            t1: m ? m.id : null,
+            t2: null,
+            stat: "atk",
+          });
+        }
+        renderPlayerActionCards();
+        log("자동 입력: 전원 기본 공격");
+      });
+
+      document
+        .getElementById("clearActionsBtn")
+        .addEventListener("click", () => {
+          game.actions.clear();
+          renderPlayerActionCards();
+          log("행동 초기화");
+        });
+
+      document.getElementById("clearLogBtn").addEventListener("click", () => {
+        game.logLines = [];
+        document.getElementById("battleLog").textContent = "";
+        renderStates();
+      });
+
+      document
+        .getElementById("copyLogBtn")
+        .addEventListener("click", async () => {
+          const text = document.getElementById("battleLog").textContent;
+          try {
+            await navigator.clipboard.writeText(text);
+            log("로그 복사 완료");
+          } catch (e) {
+            log("⚠️ 로그 복사 실패 (브라우저 권한 확인)");
+          }
+        });
+
+      /* Initial render */
+      renderPlayerActionCards();
+      renderStates();
+    </script>
+  </body>
+</html>
