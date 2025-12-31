@@ -1806,7 +1806,7 @@
         const aliveM = game.monsters.filter((m) => m.alive).length;
         const downP = game.players.filter((p) => p.down).length;
         log(
-          `\n▶ 총합: 몬스터에게 준 피해 ${totalDamageToMonsters} | 몬스터 생존 ${aliveM}/${game.monsters.length} | 플레이어 다운 ${downP}/${game.players.length}`
+          `\n▶ 총합: 몬스터에게 준 피해량 ${totalDamageToMonsters} | 몬스터 생존 ${aliveM}/${game.monsters.length} | 플레이어 다운 ${downP}/${game.players.length}`
         );
         log(`═══════════════════════════\n`);
       }
@@ -1906,7 +1906,9 @@
         } = {}
       ) {
         if (target.type === "MONSTER" && !target.alive) {
-          log(`⚠️ ${attacker.name} ${label}: 대상 ${target.name}은 이미 사망`);
+          log(
+            `⚠️ ${attacker.name} ${label}: 대상 ${target.name}은 이미 사망했습니다.`
+          );
           return;
         }
         let raw = 0;
@@ -1957,7 +1959,7 @@
         if (ignoreDefense) {
           logMsg += ` (방어 무시)`;
         }
-        logMsg += `\n   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+        logMsg += `\n   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
         log(logMsg);
 
         // if attacker is tank with ENDURE active, we count damage taken not dealt; handled elsewhere.
@@ -1976,7 +1978,7 @@
             p.tankingAll = true;
             p.minHpFloor = true;
             log(
-              `🛡️ ${p.name} 궁극기 발동: 불굴 (1턴 전체 대신 받음, HP 1 미만 불가)`
+              `🛡️ ${p.name} [궁극기:불굴] 발동! (1턴 전체 데미지를 대신 받아내지만 쓰러지지 않습니다!)`
             );
             return;
           }
@@ -1985,7 +1987,7 @@
             const roll = d6();
             const dmg = def * roll * 2;
             log(
-              `💥 ${p.name} 궁극기 발동: 헌신\n   [방어 ${def}×${roll}(1d6)×2=${dmg}] 자신 HP 전부 소모 후 적 전체 공격`
+              `💥 ${p.name} [궁극기:헌신]이 발동!\n   [방어 ${def}×${roll}(1d6)×2=${dmg}] 자신 HP 전부 소모 후 적 전체 공격`
             );
             // attack first, then drop
             for (const m of game.monsters.filter((m) => m.alive)) {
@@ -2007,7 +2009,7 @@
               (x) => x && !x.down && x.id !== p.id
             );
             if (targets.length === 0) {
-              log(`⚠️ ${p.name} 호위 실패: 대상 없음 → 기본공격`);
+              log(`⚠️ ${p.name}의 [스킬:호위] 실패: 대상 없음 → 기본공격`);
               const m = firstAliveMonster();
               if (m) doAttack(p, m, { label: "기본공격" });
               return;
@@ -2083,14 +2085,14 @@
           if (type === "ACTIVE" && key === "FIGHTING_SPIRIT") {
             const m = pickMonsterById(a.t1) || firstAliveMonster();
             if (!m) {
-              log(`⚠️ ${p.name} 투혼 실패: 대상 없음 → 기본공격`);
+              log(`⚠️ ${p.name} [스킬:투혼] 실패: 대상 없음 → 기본공격`);
               const mm = firstAliveMonster();
               if (mm) doAttack(p, mm, { label: "기본공격" });
               return;
             }
             p.fightingSpirit = { targetId: m.id, turnsLeft: 2 };
             log(
-              `🔥 ${p.name} 투혼 시작: 2턴간 DEF -5, 매 턴 ${m.name}에게 고정 50`
+              `🔥 ${p.name}의 [스킬:투혼]이 시작됩니다. 2턴간 방어력 스탯 -5, 매 턴 ${m.name}에게 고정데미지 50을 부여합니다.`
             );
             // immediate tick this turn
             const target = pickMonsterById(p.fightingSpirit.targetId);
@@ -2109,7 +2111,9 @@
           if (type === "ULT" && key === "MERCY") {
             const m = pickMonsterById(a.t1) || firstAliveMonster();
             if (!m) {
-              log(`⚠️ ${p.name} 자비 실패: 대상 없음`);
+              log(
+                `⚠️ ${p.name}의 [궁극기:자비]가 실패로 끝납니다. 대상이 없습니다.`
+              );
               return;
             }
             // attack dice twice sum then *2
@@ -2119,7 +2123,7 @@
           if (type === "ULT" && key === "CHARGE") {
             const m = pickMonsterById(a.t1) || firstAliveMonster();
             if (!m) {
-              log(`⚠️ ${p.name} 돌격 실패: 대상 없음`);
+              log(`⚠️ ${p.name} [궁극기:돌격]이 실패합니다. 대상이 없습니다.`);
               return;
             }
             doAttack(p, m, {
@@ -2134,7 +2138,7 @@
           if (type === "ACTIVE" && key === "MADNESS") {
             p.pendingAtkPlusNext += 2;
             log(
-              `😈 ${p.name} 광기: 다음 턴 공격 +2 (누적 ${p.pendingAtkPlusNext})`
+              `😈 ${p.name}의 [스킬:광기]가 발동됩니다. 다음 턴 공격 스탯 +2 (누적 ${p.pendingAtkPlusNext})`
             );
             return;
           }
@@ -2142,7 +2146,7 @@
           if (type === "ACTIVE" && key === "OBSESSION") {
             const m = pickMonsterById(a.t1) || firstAliveMonster();
             if (!m) {
-              log(`⚠️ ${p.name} 집념 실패: 대상 없음`);
+              log(`⚠️ ${p.name} [스킬:집념]이 실패했습니다. 대상이 없습니다.`);
               return;
             }
             const atkResult = baseAttackDamage(p);
@@ -2167,10 +2171,12 @@
             }
             const cost = Math.ceil(p.hp * 0.5);
             p.hp = Math.max(0, p.hp - cost);
-            log(`🩸 ${p.name} 혈투: HP ${cost} 소모`);
+            log(`🩸 ${p.name} [스킬:혈투] 발동!: HP ${cost} 가 소모됩니다!`);
             setDownIfNeeded(p);
             if (p.down) {
-              log(`⚠️ ${p.name} 혈투 후 다운되어 공격 불발`);
+              log(
+                `⚠️ ${p.name}이(가)[스킬:혈투]를 사용했으나 다운되어 공격이 불발되었습니다!`
+              );
               return;
             }
             doAttack(p, m, { mult: 1.5, label: "혈투" });
@@ -2189,7 +2195,7 @@
               const res = applyDamage(mm, dmg, { ignoreDefense: false });
               let logMsg = `   ↳ ${mm.name}`;
               if (res.defFormula) logMsg += ` [${res.defFormula}]`;
-              logMsg += ` 피해 ${dmg}, 실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated}`;
+              logMsg += ` 데미지 ${dmg}, 실제 피해량 ${res.dealt} (보호막 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
               log(logMsg);
             }
             return;
@@ -2204,12 +2210,14 @@
               return;
             }
             ally.ultUsed = false;
-            log(`🔄 ${p.name} 윤회 → ${ally.name} 궁극기 사용 가능으로 초기화`);
+            log(
+              `🔄 ${p.name} [궁극기 스킬:윤회]가 발동! → ${ally.name} 궁극기 사용 가능으로 초기화`
+            );
             return;
           }
           if (type === "ULT" && key === "REST") {
             log(
-              `🌿 ${p.name} 안식: 전체 회복 + 다운 대기 제거 + 전체 액티브 재사용 초기화`
+              `🌿 ${p.name} [궁극기 스킬:안식] 발동! 전체 회복 + 다운 대기 제거 + 전체 액티브 재사용 초기화!`
             );
             for (const ally of game.players) {
               // revive downed immediately to full
@@ -2297,7 +2305,7 @@
               sourceId: p.id,
             });
             log(
-              `📣 ${p.name}의 [스킬:격려] → ${
+              `📣 ${p.name}의 [스킬:격려]가 발동됩니다! → ${
                 ally.name
               } ${stat.toUpperCase()} +2 (다음 턴 적용)`
             );
@@ -2487,7 +2495,7 @@
               const atkFormula = `공격 ${atk}×${roll}(1d2)=${dotValue}`;
               if (redirected) {
                 log(
-                  `🩸 ${m.name}의 출혈 공격 → ${t.name} (수호: ${dotTarget.name}이 대신 받음)\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
+                  `🩸 ${m.name}의 출혈 공격 → ${t.name} ([스킬:수호] 시전자 ${dotTarget.name}이(가) 대신 받음)\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
                 );
               } else {
                 log(
@@ -2534,7 +2542,7 @@
                 });
               }
             } else {
-              log(`🔥 ${p.name} 투혼 종료`);
+              log(`🔥 ${p.name}의 [스킬:투혼]이 종료됩니다.`);
               p.fightingSpirit = null;
             }
           }
@@ -2559,7 +2567,7 @@
           let logMsg = `👹 ${monster.name} → ${tankAll.name} (${label}, 불굴 대신받음)\n`;
           if (atkFormula) logMsg += `   [${atkFormula}]\n`;
           if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
-          logMsg += `   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+          logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
           log(logMsg);
 
           if (tankAll.endure) tankAll.endure.accum += res.dealt;
@@ -2587,7 +2595,7 @@
             let logMsg = `👹 ${monster.name} → ${target.name} (${label}, [스킬:수호]를 사용한 ${tank.name}이(가) 데미지를 대신 받아냅니다!)\n`;
             if (atkFormula) logMsg += `   [${atkFormula}]\n`;
             if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
-            logMsg += `   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+            logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
             log(logMsg);
 
             if (tank.endure) tank.endure.accum += res.dealt;
@@ -2607,7 +2615,7 @@
         let logMsg = `👹 ${monster.name} → ${target.name} (${label})\n`;
         if (atkFormula) logMsg += `   [${atkFormula}]\n`;
         if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
-        logMsg += `   → 피해 ${raw}, 실제 ${res.dealt}, 보호막 흡수 ${res.absorbed}, 경감 ${res.mitigated}`;
+        logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
         log(logMsg);
 
         if (target.endure) target.endure.accum += res.dealt;
@@ -2698,7 +2706,7 @@
               const plusKey = stat + "Plus";
               p.temp[plusKey] = Math.max(0, (p.temp[plusKey] || 0) - d.value);
               log(
-                `⏳ [스킬:격려]로 인한 버프 종료: ${
+                `⏳ [스킬:격려]로 인한 버프가 종료되었습니다.: ${
                   p.name
                 } ${stat.toUpperCase()} -${d.value}`
               );
@@ -2706,7 +2714,9 @@
             // 광기 종료 처리
             if (d.type === "MADNESS_ATK" && d.turns === 1) {
               p.temp.atkPlus = Math.max(0, (p.temp.atkPlus || 0) - d.value);
-              log(`⏳ [스킬:광기]로 인한 버프 종료: ${p.name} ATK -${d.value}`);
+              log(
+                `⏳ [스킬:광기]로 인한 버프가 종료되었습니다.: ${p.name} ATK -${d.value}`
+              );
             }
           }
         }
