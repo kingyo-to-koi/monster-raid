@@ -44,6 +44,10 @@
         grid-template-columns: 1fr 1.2fr 1fr;
         gap: 12px;
         min-height: calc(100vh - 32px);
+        transition: grid-template-columns 0.3s ease;
+      }
+      .app.left-collapsed {
+        grid-template-columns: 40px 1fr 1fr;
       }
       .panel {
         background: var(--panel);
@@ -51,6 +55,54 @@
         border-radius: 10px;
         padding: 12px;
         overflow: auto;
+        position: relative;
+      }
+      #leftPanel {
+        transition: all 0.3s ease;
+      }
+      #leftPanel.collapsed {
+        padding: 8px;
+        overflow: hidden;
+      }
+      #leftPanel.collapsed > *:not(.collapse-toggle) {
+        display: none;
+      }
+      #leftPanel.collapsed .collapse-toggle {
+        display: flex;
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .collapse-toggle {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--btn);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 12px;
+        z-index: 10;
+      }
+      .collapse-toggle:hover {
+        background: var(--btn2);
+      }
+      /* 전투 제어 버튼을 로그 헤더에 배치 */
+      .control-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .control-row button {
+        padding: 6px 10px;
+        font-size: 12px;
       }
       .panel header {
         display: flex;
@@ -188,8 +240,76 @@
       }
       .log {
         font-size: 12px;
-        line-height: 1.35;
+        line-height: 1.5;
         white-space: pre-wrap;
+      }
+      
+      /* 전투 로그 스타일 개선 */
+      #battleLog {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      
+      #battleLog .log-time {
+        color: #666;
+        font-size: 10px;
+      }
+      
+      #battleLog .log-section {
+        margin: 12px 0 6px 0;
+        padding: 6px 10px;
+        background: rgba(122, 160, 255, 0.1);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 6px 6px 0;
+        font-weight: bold;
+        color: var(--accent);
+      }
+      
+      #battleLog .log-round {
+        margin: 16px 0 8px 0;
+        padding: 8px 12px;
+        background: linear-gradient(90deg, rgba(122, 160, 255, 0.2), transparent);
+        border-left: 4px solid var(--accent);
+        font-weight: bold;
+        font-size: 13px;
+        color: #fff;
+      }
+      
+      #battleLog .log-summary {
+        margin: 12px 0;
+        padding: 8px 10px;
+        background: rgba(93, 255, 165, 0.08);
+        border: 1px solid rgba(93, 255, 165, 0.2);
+        border-radius: 6px;
+      }
+      
+      #battleLog .log-attack {
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      
+      #battleLog .log-heal {
+        color: var(--ok);
+      }
+      
+      #battleLog .log-damage {
+        color: var(--danger);
+      }
+      
+      #battleLog .log-skill {
+        color: var(--warn);
+      }
+      
+      #battleLog .log-crit {
+        color: #ff9f43;
+        font-weight: bold;
+      }
+      
+      #battleLog .log-indent {
+        padding-left: 16px;
+        color: var(--muted);
+        font-size: 10px;
       }
       .stickyFooter {
         position: sticky;
@@ -251,13 +371,61 @@
         grid-template-columns: 1fr 1fr;
         gap: 10px;
         align-items: start;
+        transition: grid-template-columns 0.3s ease;
+      }
+      
+      /* 왼쪽 패널 접혔을 때 행동 카드 3열 배치 + 컴팩트 스타일 */
+      .app.left-collapsed #playerActionCards {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      
+      .app.left-collapsed #playerActionCards .card {
+        padding: 8px;
+      }
+      
+      .app.left-collapsed #playerActionCards .card h3 {
+        font-size: 13px;
+        margin: 0;
+      }
+      
+      .app.left-collapsed #playerActionCards .card small {
+        font-size: 10px;
+      }
+      
+      .app.left-collapsed #playerActionCards .chip {
+        font-size: 10px;
+        padding: 2px 6px;
+        margin-right: 4px;
+        margin-bottom: 4px;
+      }
+      
+      .app.left-collapsed #playerActionCards .actionRow {
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-top: 6px;
+      }
+      
+      .app.left-collapsed #playerActionCards .actionRow label {
+        font-size: 10px;
+      }
+      
+      .app.left-collapsed #playerActionCards .actionRow select {
+        font-size: 11px;
+        padding: 3px 5px;
+        min-width: 0;
+      }
+      
+      .app.left-collapsed #playerActionCards .rightMeta {
+        display: none;
       }
     </style>
   </head>
   <body>
-    <div class="app">
+    <div class="app" id="mainApp">
       <!-- LEFT: creation -->
       <section class="panel" id="leftPanel">
+        <button class="collapse-toggle" id="collapseLeftBtn" title="패널 접기/펼치기">◀</button>
         <header>
           <div>
             <h2>생성</h2>
@@ -377,21 +545,6 @@
           </div>
         </div>
 
-        <div class="card">
-          <h3>전투 제어</h3>
-          <div class="row">
-            <button id="startRoundBtn" class="pillBtn">1) 라운드 시작</button>
-            <button id="resolveBtn" class="pillBtn">2) 라운드 합산</button>
-            <button id="undoBtn" class="pillBtn" style="background: #e67e22">
-              ↩ 되돌리기
-            </button>
-            <button id="resetBattleBtn" class="mini">전투 리셋</button>
-          </div>
-          <small class="muted">
-            흐름: 라운드 시작(몬스터 행동 암시) → 중앙에서 플레이어 행동 선택 →
-            라운드 해석(플레이어→몬스터→최종 합산) | 되돌리기: 합산 전으로 롤백
-          </small>
-        </div>
       </section>
 
       <!-- CENTER: actions -->
@@ -434,11 +587,20 @@
             <h2>로그</h2>
             <small>HP/스탯 변화, 상태이상, 피해/경감 내역</small>
           </div>
-          <div class="row">
+        </header>
+        
+        <!-- 전투 제어 버튼 (일렬로 배치) -->
+        <div class="card" style="padding: 8px 12px; margin-bottom: 8px;">
+          <div class="control-row">
+            <button id="startRoundBtn" class="pillBtn">1) 라운드 시작</button>
+            <button id="resolveBtn" class="pillBtn">2) 라운드 합산</button>
+            <button id="undoBtn" class="pillBtn" style="background: #e67e22">↩ 되돌리기</button>
+            <button id="resetBattleBtn" class="mini">전투 리셋</button>
+            <span style="flex-grow: 1;"></span>
             <button id="copyLogBtn" class="mini">로그 복사</button>
             <button id="clearLogBtn" class="mini">로그 비우기</button>
           </div>
-        </header>
+        </div>
 
         <div class="card">
           <h3>몬스터 상태</h3>
@@ -623,7 +785,7 @@
             {
               key: "FIGHTING_SPIRIT",
               name: "투혼",
-              desc: "2턴간 방어 스탯 -5, 매 턴 지정 적 1에게 고정 100",
+              desc: "지정 적에게 고정 50 (방어 무시), 2턴간 자신 DEF -5",
               target: "ENEMY1",
             },
           ],
@@ -1034,13 +1196,17 @@
         target.debuffs = [];
       }
       function tickDots() {
-        // tick at round start
+        // DOT 틱 - 불굴(tankingAll) 상태인 탱커가 있으면 대신 받음
+        const tankAll = game.players.find((p) => p.tankingAll && !p.down);
+        
         for (const p of game.players) {
           if (p.type !== "PLAYER") continue;
-          if (p.down) continue; // downed does not tick? if you prefer tick, remove this line.
+          if (p.down) continue;
+          
           let bleedTotal = 0;
           let otherTotal = 0;
           const kept = [];
+          
           for (const d of p.dots) {
             if (d.type === "BLEED") {
               bleedTotal += d.value;
@@ -1050,37 +1216,75 @@
             d.turns -= 1;
             if (d.turns > 0) kept.push(d);
           }
+          
           // 출혈(BLEED)은 방어 무시
           if (bleedTotal > 0) {
-            const res = applyDamage(p, bleedTotal, {
-              sourceText: "BLEED",
-              ignoreDefense: true,
-            });
-            log(
-              `🩸 ${p.name} 출혈 피해 ${bleedTotal} (방어 무시, 실제 ${res.dealt}, 보호막 ${res.absorbed})`
-            );
-            // 인내 누적
-            if (p.endure) {
-              p.endure.accum += res.dealt;
-              log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
+            // 불굴 탱커가 있고, 본인이 아니면 탱커가 대신 받음
+            if (tankAll && tankAll.id !== p.id) {
+              const res = applyDamage(tankAll, bleedTotal, {
+                sourceText: "BLEED",
+                ignoreDefense: true,
+                allowFloor: true, // HP 1 미만 불가
+              });
+              log(
+                `🩸 ${p.name} 출혈 피해 ${bleedTotal} → ${tankAll.name}이 불굴로 대신 받음 (방어 무시, 실제 ${res.dealt})`
+              );
+              // 인내 누적
+              if (tankAll.endure) {
+                tankAll.endure.accum += res.dealt;
+                log(`   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`);
+              }
+            } else {
+              const res = applyDamage(p, bleedTotal, {
+                sourceText: "BLEED",
+                ignoreDefense: true,
+                allowFloor: p.tankingAll, // 본인이 불굴이면 HP 1 미만 불가
+              });
+              log(
+                `🩸 ${p.name} 출혈 피해 ${bleedTotal} (방어 무시, 실제 ${res.dealt}, 보호막 ${res.absorbed})`
+              );
+              // 인내 누적
+              if (p.endure) {
+                p.endure.accum += res.dealt;
+                log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
+              }
+              if (!p.tankingAll) setDownIfNeeded(p); // 불굴이면 다운 안됨
             }
-            setDownIfNeeded(p);
           }
+          
           // 기타 DOT는 방어 적용
           if (otherTotal > 0) {
-            const res = applyDamage(p, otherTotal, { sourceText: "DOT" });
-            log(
-              `🩸 ${p.name} DOT 피해 ${otherTotal} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
-            );
-            // 인내 누적
-            if (p.endure) {
-              p.endure.accum += res.dealt;
-              log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
+            if (tankAll && tankAll.id !== p.id) {
+              const res = applyDamage(tankAll, otherTotal, {
+                sourceText: "DOT",
+                allowFloor: true,
+              });
+              log(
+                `🩸 ${p.name} DOT 피해 ${otherTotal} → ${tankAll.name}이 불굴로 대신 받음 (실제 ${res.dealt}, 경감 ${res.mitigated})`
+              );
+              if (tankAll.endure) {
+                tankAll.endure.accum += res.dealt;
+                log(`   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`);
+              }
+            } else {
+              const res = applyDamage(p, otherTotal, { 
+                sourceText: "DOT",
+                allowFloor: p.tankingAll,
+              });
+              log(
+                `🩸 ${p.name} DOT 피해 ${otherTotal} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+              );
+              if (p.endure) {
+                p.endure.accum += res.dealt;
+                log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
+              }
+              if (!p.tankingAll) setDownIfNeeded(p);
             }
-            setDownIfNeeded(p);
           }
           p.dots = kept;
         }
+        
+        // 몬스터 DOT 처리
         for (const m of game.monsters) {
           if (!m.alive) continue;
           let total = 0;
@@ -1136,11 +1340,77 @@
                Logging & UI sync
             ========================= */
       function log(line) {
-        game.logLines.push(`[${nowTime()}] ${line}`);
-        const el = document.getElementById("battleLog");
-        el.textContent = game.logLines.slice(-500).join("\n");
-        el.scrollTop = el.scrollHeight;
+        game.logLines.push({ time: nowTime(), text: line });
+        renderBattleLog();
         renderStates();
+      }
+      
+      function renderBattleLog() {
+        const el = document.getElementById("battleLog");
+        const lines = game.logLines.slice(-300);
+        
+        let html = "";
+        for (const entry of lines) {
+          const text = entry.text;
+          
+          // 라운드 시작
+          if (text.includes("=== ROUND") && text.includes("START ===")) {
+            html += `<div class="log-round">${escapeHtml(text)}</div>`;
+          }
+          // 섹션 구분 (--- 플레이어 턴, --- 몬스터 턴, --- 최종 합산 등)
+          else if (text.startsWith("---") && text.endsWith("---")) {
+            html += `<div class="log-section">${escapeHtml(text.replace(/---/g, "").trim())}</div>`;
+          }
+          // 라운드 결과
+          else if (text.includes("═══") && text.includes("결과")) {
+            html += `<div class="log-round">${escapeHtml(text)}</div>`;
+          }
+          // 플레이어/몬스터 상태 요약
+          else if (text.startsWith("▶") || text.startsWith("   ")) {
+            html += `<div class="log-summary">${escapeHtml(text)}</div>`;
+          }
+          // 치명타
+          else if (text.includes("CRIT!") || text.includes("치명타")) {
+            html += `<div class="log-crit"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
+          }
+          // 힐/회복
+          else if (text.includes("💚") || text.includes("회복") || text.includes("회생") || text.includes("가호")) {
+            html += `<div class="log-heal"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
+          }
+          // 출혈/DOT
+          else if (text.includes("🩸") || text.includes("출혈") || text.includes("DOT")) {
+            html += `<div class="log-damage"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
+          }
+          // 스킬 발동
+          else if (text.includes("[스킬:") || text.includes("🔥") || text.includes("🛡️") || text.includes("⚔️") || text.includes("🧱")) {
+            html += `<div class="log-skill"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
+          }
+          // 들여쓰기 (↳, ↳ 등)
+          else if (text.trim().startsWith("↳") || text.trim().startsWith("→")) {
+            html += `<div class="log-indent">${escapeHtml(text)}</div>`;
+          }
+          // 공격
+          else if (text.includes("🗡️") || text.includes("👹")) {
+            html += `<div class="log-attack"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
+          }
+          // 기본
+          else {
+            html += `<div><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
+          }
+        }
+        
+        el.innerHTML = html;
+        el.scrollTop = el.scrollHeight;
+      }
+      
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;")
+          .replace(/\n/g, "<br>");
       }
 
       function renderStates() {
@@ -1644,12 +1914,12 @@
           return;
         }
 
-        // round start: revive counters, apply pending buffs, tick DOT
+        // round start: revive counters, apply pending buffs
         log(`\n=== ROUND ${game.round} START ===`);
         for (const p of game.players) {
           reviveIfReady(p);
         }
-        tickDots();
+        // DOT 틱은 resolveRound에서 플레이어 행동 후 처리 (불굴 등 스킬 적용을 위해)
 
         // clear per-round flags
         for (const p of game.players) {
@@ -1736,6 +2006,10 @@
           const a = game.actions.get(p.id);
           resolvePlayerAction(p, a);
         }
+
+        // 2.5) DOT 틱 - 플레이어 행동 후 (불굴 등 스킬이 적용된 상태에서)
+        log(`--- DOT 피해 ---`);
+        tickDots();
 
         // 3) Resolve MONSTER actions
         log(`--- 몬스터 턴 ---`);
@@ -2090,19 +2364,20 @@
               if (mm) doAttack(p, mm, { label: "기본공격" });
               return;
             }
-            p.fightingSpirit = { targetId: m.id, turnsLeft: 2 };
+            
+            // 2턴간 방어 -5 (이번 턴 + 다음 턴)
+            p.fightingSpirit = { turnsLeft: 2 };
+            
             log(
-              `🔥 ${p.name}의 [스킬:투혼]이 시작됩니다. 2턴간 방어력 스탯 -5, 매 턴 ${m.name}에게 고정데미지 50을 부여합니다.`
+              `🔥 ${p.name}의 [스킬:투혼] 발동! ${m.name}에게 고정 50 (방어 무시), 2턴간 DEF -5`
             );
-            // immediate tick this turn
-            const target = pickMonsterById(p.fightingSpirit.targetId);
-            if (target && target.alive) {
-              doAttack(p, target, {
-                fixed: 50,
-                label: "투혼(고정)",
-                ignoreDefense: false,
-              });
-            }
+            
+            // 즉시 고정 50 데미지 (방어 무시, 1회만)
+            doAttack(p, m, {
+              fixed: 50,
+              label: "투혼(고정)",
+              ignoreDefense: true,
+            });
             return;
           }
         }
@@ -2467,17 +2742,29 @@
               .map((id) => game.players.find((p) => p.id === id))
               .filter(Boolean);
 
+            // 불굴(전체 대신맞기) 체크
+            const tankAll = game.players.find((p) => p.tankingAll && !p.down);
+
             for (const t of targets) {
               if (t.down) continue;
 
-              // 수호 체크: 수호 대상이면 탱커에게 DOT 적용
+              // 1) 불굴이 활성화되어 있으면 탱커에게 DOT 적용
               let dotTarget = t;
               let redirected = false;
-              if (t.redirect && t.redirect.mode === "FULL") {
+              let redirectReason = "";
+              
+              if (tankAll && tankAll.id !== t.id) {
+                dotTarget = tankAll;
+                redirected = true;
+                redirectReason = "불굴";
+              }
+              // 2) 불굴이 없으면 수호 체크
+              else if (t.redirect && t.redirect.mode === "FULL") {
                 const tank = pickPlayerById(t.redirect.tankId);
                 if (tank && !tank.down) {
                   dotTarget = tank;
                   redirected = true;
+                  redirectReason = "수호";
                 }
               }
 
@@ -2495,7 +2782,7 @@
               const atkFormula = `공격 ${atk}×${roll}(1d2)=${dotValue}`;
               if (redirected) {
                 log(
-                  `🩸 ${m.name}의 출혈 공격 → ${t.name} ([스킬:수호] 시전자 ${dotTarget.name}이(가) 대신 받음)\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
+                  `🩸 ${m.name}의 출혈 공격 → ${t.name} ([스킬:${redirectReason}] ${dotTarget.name}이(가) 대신 받음)\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
                 );
               } else {
                 log(
@@ -2528,21 +2815,13 @@
           }
         }
 
-        // fighting spirit second tick if active (we already ticked when cast, so here tick if still active for next turns)
+        // fighting spirit - 방어 감소 지속시간 관리 (공격은 발동 시 1회만)
         for (const p of game.players) {
           if (p.fightingSpirit) {
             p.fightingSpirit.turnsLeft -= 1;
-            if (p.fightingSpirit.turnsLeft > 0) {
-              const target = pickMonsterById(p.fightingSpirit.targetId);
-              if (target && target.alive && !p.down) {
-                doAttack(p, target, {
-                  fixed: 100,
-                  label: "투혼(고정)",
-                  ignoreDefense: false,
-                });
-              }
-            } else {
-              log(`🔥 ${p.name}의 [스킬:투혼]이 종료됩니다.`);
+            
+            if (p.fightingSpirit.turnsLeft <= 0) {
+              log(`🔥 ${p.name}의 [스킬:투혼] 종료: DEF 원래대로 복구`);
               p.fightingSpirit = null;
             }
           }
@@ -2901,14 +3180,16 @@
 
       document.getElementById("clearLogBtn").addEventListener("click", () => {
         game.logLines = [];
-        document.getElementById("battleLog").textContent = "";
+        document.getElementById("battleLog").innerHTML = "";
         renderStates();
       });
 
       document
         .getElementById("copyLogBtn")
         .addEventListener("click", async () => {
-          const text = document.getElementById("battleLog").textContent;
+          // HTML에서 텍스트만 추출
+          const logEl = document.getElementById("battleLog");
+          const text = logEl.innerText || logEl.textContent;
           try {
             await navigator.clipboard.writeText(text);
             log("로그 복사 완료");
@@ -2916,6 +3197,25 @@
             log("⚠️ 로그 복사 실패 (브라우저 권한 확인)");
           }
         });
+
+      /* 왼쪽 패널 접기/펼치기 */
+      document.getElementById("collapseLeftBtn").addEventListener("click", () => {
+        const app = document.getElementById("mainApp");
+        const leftPanel = document.getElementById("leftPanel");
+        const btn = document.getElementById("collapseLeftBtn");
+        
+        if (leftPanel.classList.contains("collapsed")) {
+          leftPanel.classList.remove("collapsed");
+          app.classList.remove("left-collapsed");
+          btn.textContent = "◀";
+          btn.title = "패널 접기";
+        } else {
+          leftPanel.classList.add("collapsed");
+          app.classList.add("left-collapsed");
+          btn.textContent = "▶ 생성";
+          btn.title = "패널 펼치기";
+        }
+      });
 
       /* Initial render */
       renderPlayerActionCards();
