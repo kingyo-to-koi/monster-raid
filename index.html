@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Monster Raid (Vanilla JS)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
       :root {
         --bg: #0f0f14;
@@ -597,7 +598,7 @@
             <button id="undoBtn" class="pillBtn" style="background: #e67e22">↩ 되돌리기</button>
             <button id="resetBattleBtn" class="mini">전투 리셋</button>
             <span style="flex-grow: 1;"></span>
-            <button id="copyLogBtn" class="mini">로그 복사</button>
+            <button id="copyLogBtn" class="mini">📷 로그 캡쳐</button>
             <button id="clearLogBtn" class="mini">로그 비우기</button>
           </div>
         </div>
@@ -3187,14 +3188,38 @@
       document
         .getElementById("copyLogBtn")
         .addEventListener("click", async () => {
-          // HTML에서 텍스트만 추출
-          const logEl = document.getElementById("battleLog");
-          const text = logEl.innerText || logEl.textContent;
+          const logCard = document.getElementById("battleLog").closest(".card");
+          
           try {
-            await navigator.clipboard.writeText(text);
-            log("로그 복사 완료");
+            // 캡쳐 중 표시
+            const btn = document.getElementById("copyLogBtn");
+            const originalText = btn.textContent;
+            btn.textContent = "캡쳐 중...";
+            btn.disabled = true;
+            
+            // html2canvas로 로그 영역 캡쳐
+            const canvas = await html2canvas(logCard, {
+              backgroundColor: "#171724",
+              scale: 2, // 고해상도
+              logging: false,
+              useCORS: true
+            });
+            
+            // 이미지로 다운로드
+            const link = document.createElement("a");
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+            link.download = `battle-log-${timestamp}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            
+            btn.textContent = originalText;
+            btn.disabled = false;
+            log("📷 로그 캡쳐 완료 - 이미지 다운로드됨");
           } catch (e) {
-            log("⚠️ 로그 복사 실패 (브라우저 권한 확인)");
+            log("⚠️ 로그 캡쳐 실패: " + e.message);
+            const btn = document.getElementById("copyLogBtn");
+            btn.textContent = "📷 로그 캡쳐";
+            btn.disabled = false;
           }
         });
 
