@@ -244,20 +244,19 @@
         line-height: 1.5;
         white-space: pre-wrap;
       }
-
+      
       /* 전투 로그 스타일 개선 */
       #battleLog {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         font-size: 11px;
         line-height: 1.6;
       }
-
+      
       #battleLog .log-time {
         color: #666;
         font-size: 10px;
       }
-
+      
       #battleLog .log-section {
         margin: 12px 0 6px 0;
         padding: 6px 10px;
@@ -267,21 +266,17 @@
         font-weight: bold;
         color: var(--accent);
       }
-
+      
       #battleLog .log-round {
         margin: 16px 0 8px 0;
         padding: 8px 12px;
-        background: linear-gradient(
-          90deg,
-          rgba(122, 160, 255, 0.2),
-          transparent
-        );
+        background: linear-gradient(90deg, rgba(122, 160, 255, 0.2), transparent);
         border-left: 4px solid var(--accent);
         font-weight: bold;
         font-size: 13px;
         color: #fff;
       }
-
+      
       #battleLog .log-summary {
         margin: 12px 0;
         padding: 8px 10px;
@@ -289,29 +284,29 @@
         border: 1px solid rgba(93, 255, 165, 0.2);
         border-radius: 6px;
       }
-
+      
       #battleLog .log-attack {
         padding: 4px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
       }
-
+      
       #battleLog .log-heal {
         color: var(--ok);
       }
-
+      
       #battleLog .log-damage {
         color: var(--danger);
       }
-
+      
       #battleLog .log-skill {
         color: var(--warn);
       }
-
+      
       #battleLog .log-crit {
         color: #ff9f43;
         font-weight: bold;
       }
-
+      
       #battleLog .log-indent {
         padding-left: 16px;
         color: var(--muted);
@@ -379,49 +374,49 @@
         align-items: start;
         transition: grid-template-columns 0.3s ease;
       }
-
+      
       /* 왼쪽 패널 접혔을 때 행동 카드 3열 배치 + 컴팩트 스타일 */
       .app.left-collapsed #playerActionCards {
         grid-template-columns: repeat(3, 1fr);
         gap: 8px;
       }
-
+      
       .app.left-collapsed #playerActionCards .card {
         padding: 8px;
       }
-
+      
       .app.left-collapsed #playerActionCards .card h3 {
         font-size: 13px;
         margin: 0;
       }
-
+      
       .app.left-collapsed #playerActionCards .card small {
         font-size: 10px;
       }
-
+      
       .app.left-collapsed #playerActionCards .chip {
         font-size: 10px;
         padding: 2px 6px;
         margin-right: 4px;
         margin-bottom: 4px;
       }
-
+      
       .app.left-collapsed #playerActionCards .actionRow {
         grid-template-columns: 1fr 1fr;
         gap: 4px;
         margin-top: 6px;
       }
-
+      
       .app.left-collapsed #playerActionCards .actionRow label {
         font-size: 10px;
       }
-
+      
       .app.left-collapsed #playerActionCards .actionRow select {
         font-size: 11px;
         padding: 3px 5px;
         min-width: 0;
       }
-
+      
       .app.left-collapsed #playerActionCards .rightMeta {
         display: none;
       }
@@ -431,13 +426,7 @@
     <div class="app" id="mainApp">
       <!-- LEFT: creation -->
       <section class="panel" id="leftPanel">
-        <button
-          class="collapse-toggle"
-          id="collapseLeftBtn"
-          title="패널 접기/펼치기"
-        >
-          ◀
-        </button>
+        <button class="collapse-toggle" id="collapseLeftBtn" title="패널 접기/펼치기">◀</button>
         <header>
           <div>
             <h2>생성</h2>
@@ -556,6 +545,7 @@
             <button id="clearMonstersBtn" class="mini">몬스터 초기화</button>
           </div>
         </div>
+
       </section>
 
       <!-- CENTER: actions -->
@@ -599,17 +589,15 @@
             <small>HP/스탯 변화, 상태이상, 피해/경감 내역</small>
           </div>
         </header>
-
+        
         <!-- 전투 제어 버튼 (일렬로 배치) -->
-        <div class="card" style="padding: 8px 12px; margin-bottom: 8px">
+        <div class="card" style="padding: 8px 12px; margin-bottom: 8px;">
           <div class="control-row">
             <button id="startRoundBtn" class="pillBtn">1) 라운드 시작</button>
             <button id="resolveBtn" class="pillBtn">2) 라운드 합산</button>
-            <button id="undoBtn" class="pillBtn" style="background: #e67e22">
-              ↩ 되돌리기
-            </button>
+            <button id="undoBtn" class="pillBtn" style="background: #e67e22">↩ 되돌리기</button>
             <button id="resetBattleBtn" class="mini">전투 리셋</button>
-            <span style="flex-grow: 1"></span>
+            <span style="flex-grow: 1;"></span>
             <button id="copyLogBtn" class="mini">📷 로그 캡쳐</button>
             <button id="clearLogBtn" class="mini">로그 비우기</button>
           </div>
@@ -828,19 +816,19 @@
             {
               key: "OBSESSION",
               name: "집념",
-              desc: "3턴간 지정 적 1에게 기본 공격값*0.5 지속 피해(중첩 가능)",
+              desc: "3턴간 지정 적 1에게 기본 공격값×1d6 출혈 지속 피해",
               target: "ENEMY1",
             },
             {
               key: "BLOODFIGHT",
               name: "혈투",
-              desc: "현재 체력 50% 소모 후 지정 적 1에게 최종 공격값*1.5",
+              desc: "현재 체력 50% 소모 후 지정 적 1에게 최종 공격값×2 공격",
               target: "ENEMY1",
             },
             {
               key: "MASSACRE",
               name: "참살",
-              desc: "적 전체에게 최종 공격값*0.8",
+              desc: "적 전체에게 최종 공격값×1d6×1.5 공격",
               target: "ENEMY_ALL",
             },
           ],
@@ -848,13 +836,13 @@
             {
               key: "MERCY",
               name: "자비",
-              desc: "공격 다이스 2회 합산 후 최종 공격값*2",
+              desc: "공격 다이스 2회 합산 후 최종 공격값×2.5 공격",
               target: "ENEMY1",
             },
             {
               key: "CHARGE",
               name: "돌격",
-              desc: "적 방어값 무시, 공격 다이스 2회 합산 후 ×1.5 공격",
+              desc: "방어 무시, 공격 다이스 2회 합산 후 최종 대미지×2 공격",
               target: "ENEMY1",
             },
           ],
@@ -864,13 +852,13 @@
             {
               key: "REVIVE",
               name: "회생",
-              desc: "지정 1인 체력을 최종 민첩값 만큼 회복",
+              desc: "지정 1인 체력을 최종 민첩값×1.5×1d6 회복",
               target: "ALLY1",
             },
             {
               key: "BLESS",
               name: "가호",
-              desc: "지정 2인 체력을 최종 민첩값*0.5 만큼 회복",
+              desc: "지정 2인 체력을 최종 민첩값×1d6 회복",
               target: "ALLY2",
             },
             {
@@ -1211,15 +1199,15 @@
       function tickDots() {
         // DOT 틱 - 불굴(tankingAll) 상태인 탱커가 있으면 대신 받음
         const tankAll = game.players.find((p) => p.tankingAll && !p.down);
-
+        
         for (const p of game.players) {
           if (p.type !== "PLAYER") continue;
           if (p.down) continue;
-
+          
           let bleedTotal = 0;
           let otherTotal = 0;
           const kept = [];
-
+          
           for (const d of p.dots) {
             if (d.type === "BLEED") {
               bleedTotal += d.value;
@@ -1229,7 +1217,7 @@
             d.turns -= 1;
             if (d.turns > 0) kept.push(d);
           }
-
+          
           // 출혈(BLEED)은 방어 무시
           if (bleedTotal > 0) {
             // 불굴 탱커가 있고, 본인이 아니면 탱커가 대신 받음
@@ -1245,9 +1233,7 @@
               // 인내 누적
               if (tankAll.endure) {
                 tankAll.endure.accum += res.dealt;
-                log(
-                  `   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`
-                );
+                log(`   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`);
               }
             } else {
               const res = applyDamage(p, bleedTotal, {
@@ -1266,7 +1252,7 @@
               if (!p.tankingAll) setDownIfNeeded(p); // 불굴이면 다운 안됨
             }
           }
-
+          
           // 기타 DOT는 방어 적용
           if (otherTotal > 0) {
             if (tankAll && tankAll.id !== p.id) {
@@ -1279,12 +1265,10 @@
               );
               if (tankAll.endure) {
                 tankAll.endure.accum += res.dealt;
-                log(
-                  `   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`
-                );
+                log(`   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`);
               }
             } else {
-              const res = applyDamage(p, otherTotal, {
+              const res = applyDamage(p, otherTotal, { 
                 sourceText: "DOT",
                 allowFloor: p.tankingAll,
               });
@@ -1300,7 +1284,7 @@
           }
           p.dots = kept;
         }
-
+        
         // 몬스터 DOT 처리
         for (const m of game.monsters) {
           if (!m.alive) continue;
@@ -1361,24 +1345,22 @@
         renderBattleLog();
         renderStates();
       }
-
+      
       function renderBattleLog() {
         const el = document.getElementById("battleLog");
         const lines = game.logLines.slice(-300);
-
+        
         let html = "";
         for (const entry of lines) {
           const text = entry.text;
-
+          
           // 라운드 시작
           if (text.includes("=== ROUND") && text.includes("START ===")) {
             html += `<div class="log-round">${escapeHtml(text)}</div>`;
           }
           // 섹션 구분 (--- 플레이어 턴, --- 몬스터 턴, --- 최종 합산 등)
           else if (text.startsWith("---") && text.endsWith("---")) {
-            html += `<div class="log-section">${escapeHtml(
-              text.replace(/---/g, "").trim()
-            )}</div>`;
+            html += `<div class="log-section">${escapeHtml(text.replace(/---/g, "").trim())}</div>`;
           }
           // 라운드 결과
           else if (text.includes("═══") && text.includes("결과")) {
@@ -1390,42 +1372,19 @@
           }
           // 치명타
           else if (text.includes("CRIT!") || text.includes("치명타")) {
-            html += `<div class="log-crit"><span class="log-time">[${
-              entry.time
-            }]</span> ${escapeHtml(text)}</div>`;
+            html += `<div class="log-crit"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
           }
           // 힐/회복
-          else if (
-            text.includes("💚") ||
-            text.includes("회복") ||
-            text.includes("회생") ||
-            text.includes("가호")
-          ) {
-            html += `<div class="log-heal"><span class="log-time">[${
-              entry.time
-            }]</span> ${escapeHtml(text)}</div>`;
+          else if (text.includes("💚") || text.includes("회복") || text.includes("회생") || text.includes("가호")) {
+            html += `<div class="log-heal"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
           }
           // 출혈/DOT
-          else if (
-            text.includes("🩸") ||
-            text.includes("출혈") ||
-            text.includes("DOT")
-          ) {
-            html += `<div class="log-damage"><span class="log-time">[${
-              entry.time
-            }]</span> ${escapeHtml(text)}</div>`;
+          else if (text.includes("🩸") || text.includes("출혈") || text.includes("DOT")) {
+            html += `<div class="log-damage"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
           }
           // 스킬 발동
-          else if (
-            text.includes("[스킬:") ||
-            text.includes("🔥") ||
-            text.includes("🛡️") ||
-            text.includes("⚔️") ||
-            text.includes("🧱")
-          ) {
-            html += `<div class="log-skill"><span class="log-time">[${
-              entry.time
-            }]</span> ${escapeHtml(text)}</div>`;
+          else if (text.includes("[스킬:") || text.includes("🔥") || text.includes("🛡️") || text.includes("⚔️") || text.includes("🧱")) {
+            html += `<div class="log-skill"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
           }
           // 들여쓰기 (↳, ↳ 등)
           else if (text.trim().startsWith("↳") || text.trim().startsWith("→")) {
@@ -1433,22 +1392,18 @@
           }
           // 공격
           else if (text.includes("🗡️") || text.includes("👹")) {
-            html += `<div class="log-attack"><span class="log-time">[${
-              entry.time
-            }]</span> ${escapeHtml(text)}</div>`;
+            html += `<div class="log-attack"><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
           }
           // 기본
           else {
-            html += `<div><span class="log-time">[${
-              entry.time
-            }]</span> ${escapeHtml(text)}</div>`;
+            html += `<div><span class="log-time">[${entry.time}]</span> ${escapeHtml(text)}</div>`;
           }
         }
-
+        
         el.innerHTML = html;
         el.scrollTop = el.scrollHeight;
       }
-
+      
       function escapeHtml(text) {
         return text
           .replace(/&/g, "&amp;")
@@ -2410,14 +2365,14 @@
               if (mm) doAttack(p, mm, { label: "기본공격" });
               return;
             }
-
+            
             // 2턴간 방어 -5 (이번 턴 + 다음 턴)
             p.fightingSpirit = { turnsLeft: 2 };
-
+            
             log(
               `🔥 ${p.name}의 [스킬:투혼] 발동! ${m.name}에게 고정 50 (방어 무시), 2턴간 DEF -5`
             );
-
+            
             // 즉시 고정 50 데미지 (방어 무시, 1회만)
             doAttack(p, m, {
               fixed: 50,
@@ -2437,8 +2392,8 @@
               );
               return;
             }
-            // attack dice twice sum then *2
-            doAttack(p, m, { diceTwice: true, mult: 2.0, label: "자비" });
+            // 공격 다이스 2회 합산 후 최종 공격값×2.5
+            doAttack(p, m, { diceTwice: true, mult: 2.5, label: "자비" });
             return;
           }
           if (type === "ULT" && key === "CHARGE") {
@@ -2447,8 +2402,9 @@
               log(`⚠️ ${p.name} [궁극기:돌격]이 실패합니다. 대상이 없습니다.`);
               return;
             }
+            // 방어 무시, 공격 다이스 2회 합산 후 최종 대미지×2
             doAttack(p, m, {
-              mult: 1.5,
+              mult: 2.0,
               ignoreDefense: true,
               diceTwice: true,
               label: "돌격(방어무시)",
@@ -2470,16 +2426,18 @@
               log(`⚠️ ${p.name} [스킬:집념]이 실패했습니다. 대상이 없습니다.`);
               return;
             }
-            const atkResult = baseAttackDamage(p);
-            const dotVal = Math.floor(atkResult.damage * 0.5);
+            // 기본 공격값×1d6 출혈 DOT
+            const baseAtk = p.stats.atk;
+            const roll = d6();
+            const dotVal = baseAtk * roll;
             addDot(m, {
-              type: "OBSESSION",
+              type: "BLEED",
               value: dotVal,
               turns: 3,
               sourceId: p.id,
             });
             log(
-              `🩸 ${p.name} 집념 → ${m.name}\n   [공격 ${atkResult.atk}×${atkResult.roll}(1d6)×0.5=${dotVal}] DOT ${dotVal}/턴 ×3턴 (중첩 가능)`
+              `🩸 ${p.name} 집념 → ${m.name}\n   [기본 공격 ${baseAtk}×${roll}(1d6)=${dotVal}] 출혈 ${dotVal}/턴 ×3턴 (방어 무시)`
             );
             return;
           }
@@ -2491,32 +2449,26 @@
               return;
             }
             const cost = Math.ceil(p.hp * 0.5);
-            p.hp = Math.max(0, p.hp - cost);
-            log(`🩸 ${p.name} [스킬:혈투] 발동!: HP ${cost} 가 소모됩니다!`);
-            setDownIfNeeded(p);
-            if (p.down) {
-              log(
-                `⚠️ ${p.name}이(가)[스킬:혈투]를 사용했으나 다운되어 공격이 불발되었습니다!`
-              );
-              return;
-            }
-            doAttack(p, m, { mult: 1.5, label: "혈투" });
+            p.hp = Math.max(1, p.hp - cost);
+            log(`🩸 ${p.name} [스킬:혈투] 발동! HP ${cost} 소모 (현재 HP: ${p.hp})`);
+            // 최종 공격값×2 공격
+            doAttack(p, m, { mult: 2.0, label: "혈투" });
             return;
           }
 
           if (type === "ACTIVE" && key === "MASSACRE") {
+            // 최종 공격값×1d6×1.5 적 전체 공격
             const atk = effectiveStat(p, "atk");
             const roll = d6();
-            const fAtk = atk * roll;
-            const dmg = Math.floor(fAtk * 1);
+            const dmg = Math.floor(atk * roll * 1.5);
             log(
-              `⚔️ ${p.name} 참살: 적 전체 공격\n   [공격 ${atk}×${roll}(1d6)=${dmg}]`
+              `⚔️ ${p.name} 참살: 적 전체 공격\n   [공격 ${atk}×${roll}(1d6)×1.5=${dmg}]`
             );
             for (const mm of game.monsters.filter((x) => x.alive)) {
               const res = applyDamage(mm, dmg, { ignoreDefense: false });
               let logMsg = `   ↳ ${mm.name}`;
               if (res.defFormula) logMsg += ` [${res.defFormula}]`;
-              logMsg += ` 데미지 ${dmg}, 실제 피해량 ${res.dealt} (보호막 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
+              logMsg += ` 피해 ${dmg}, 실제 ${res.dealt} (보호막 ${res.absorbed}, 경감 ${res.mitigated})`;
               log(logMsg);
             }
             return;
@@ -2557,9 +2509,10 @@
               log(`⚠️ ${p.name} [스킬:회생] 실패! 대상 없음`);
               return;
             }
+            // 최종 민첩×1.5×1d6 회복
             const agi = effectiveStat(p, "agi");
             const roll = d6();
-            let amount = agi * roll;
+            let amount = Math.floor(agi * 1.5 * roll);
             let critText = "";
 
             // 크리티컬 체크
@@ -2569,13 +2522,9 @@
               log(`✨ CRIT! ${p.name} (회생)`);
             }
 
-            const healed = heal(ally, Math.floor(amount));
+            const healed = heal(ally, amount);
             log(
-              `💚 ${p.name}가 [스킬: 회생]으로 ${
-                ally.name
-              }\n   [민첩 ${agi}×${roll}(1d6)=${
-                agi * roll
-              }${critText}] 실제 회복 ${healed}`
+              `💚 ${p.name}가 [스킬:회생]으로 ${ally.name}\n   [민첩 ${agi}×1.5×${roll}(1d6)=${Math.floor(agi * 1.5 * roll)}${critText}] 실제 회복 ${healed}`
             );
             return;
           }
@@ -2588,10 +2537,10 @@
               log(`⚠️ ${p.name} 가호 실패: 대상 없음`);
               return;
             }
+            // 최종 민첩×1d6×1 회복 (2인)
             const agi = effectiveStat(p, "agi");
             const roll = d6();
-            let baseAmount = Math.floor(agi * roll * 0.5);
-            let amount = baseAmount;
+            let amount = agi * roll;
             let critText = "";
 
             // 크리티컬 체크
@@ -2602,7 +2551,7 @@
             }
 
             log(
-              `💚 ${p.name}의 [스킬:가호] 발동\n   [민첩 ${agi}×${roll}(1d6)×0.5=${baseAmount}${critText}]`
+              `💚 ${p.name}의 [스킬:가호] 발동\n   [민첩 ${agi}×${roll}(1d6)=${agi * roll}${critText}]`
             );
             for (const t of targets) {
               const healed = heal(t, amount);
@@ -2798,7 +2747,7 @@
               let dotTarget = t;
               let redirected = false;
               let redirectReason = "";
-
+              
               if (tankAll && tankAll.id !== t.id) {
                 dotTarget = tankAll;
                 redirected = true;
@@ -2865,7 +2814,7 @@
         for (const p of game.players) {
           if (p.fightingSpirit) {
             p.fightingSpirit.turnsLeft -= 1;
-
+            
             if (p.fightingSpirit.turnsLeft <= 0) {
               log(`🔥 ${p.name}의 [스킬:투혼] 종료: DEF 원래대로 복구`);
               p.fightingSpirit = null;
@@ -3234,32 +3183,29 @@
         .getElementById("copyLogBtn")
         .addEventListener("click", async () => {
           const logCard = document.getElementById("battleLog").closest(".card");
-
+          
           try {
             // 캡쳐 중 표시
             const btn = document.getElementById("copyLogBtn");
             const originalText = btn.textContent;
             btn.textContent = "캡쳐 중...";
             btn.disabled = true;
-
+            
             // html2canvas로 로그 영역 캡쳐
             const canvas = await html2canvas(logCard, {
               backgroundColor: "#171724",
               scale: 2, // 고해상도
               logging: false,
-              useCORS: true,
+              useCORS: true
             });
-
+            
             // 이미지로 다운로드
             const link = document.createElement("a");
-            const timestamp = new Date()
-              .toISOString()
-              .slice(0, 19)
-              .replace(/[T:]/g, "-");
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
             link.download = `battle-log-${timestamp}.png`;
             link.href = canvas.toDataURL("image/png");
             link.click();
-
+            
             btn.textContent = originalText;
             btn.disabled = false;
             log("📷 로그 캡쳐 완료 - 이미지 다운로드됨");
@@ -3272,25 +3218,23 @@
         });
 
       /* 왼쪽 패널 접기/펼치기 */
-      document
-        .getElementById("collapseLeftBtn")
-        .addEventListener("click", () => {
-          const app = document.getElementById("mainApp");
-          const leftPanel = document.getElementById("leftPanel");
-          const btn = document.getElementById("collapseLeftBtn");
-
-          if (leftPanel.classList.contains("collapsed")) {
-            leftPanel.classList.remove("collapsed");
-            app.classList.remove("left-collapsed");
-            btn.textContent = "◀";
-            btn.title = "패널 접기";
-          } else {
-            leftPanel.classList.add("collapsed");
-            app.classList.add("left-collapsed");
-            btn.textContent = "▶ 생성";
-            btn.title = "패널 펼치기";
-          }
-        });
+      document.getElementById("collapseLeftBtn").addEventListener("click", () => {
+        const app = document.getElementById("mainApp");
+        const leftPanel = document.getElementById("leftPanel");
+        const btn = document.getElementById("collapseLeftBtn");
+        
+        if (leftPanel.classList.contains("collapsed")) {
+          leftPanel.classList.remove("collapsed");
+          app.classList.remove("left-collapsed");
+          btn.textContent = "◀";
+          btn.title = "패널 접기";
+        } else {
+          leftPanel.classList.add("collapsed");
+          app.classList.add("left-collapsed");
+          btn.textContent = "▶ 생성";
+          btn.title = "패널 펼치기";
+        }
+      });
 
       /* Initial render */
       renderPlayerActionCards();
