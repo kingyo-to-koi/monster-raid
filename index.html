@@ -450,7 +450,7 @@
         </header>
 
         <div class="card">
-          <h3>†캐릭터 생성†</h3>
+          <h3>º캐릭터 생성º</h3>
 
           <div class="row">
             <div class="col">
@@ -912,6 +912,28 @@
       /* =========================
                Entity model
             ========================= */
+      function deletePlayer(playerId) {
+        const idx = game.players.findIndex((p) => p.id === playerId);
+        if (idx !== -1) {
+          const name = game.players[idx].name;
+          game.players.splice(idx, 1);
+          game.actions.delete(playerId);
+          log(`🗑️ ${name} 삭제됨`);
+          renderPlayerActionCards();
+          renderStates();
+        }
+      }
+
+      function deleteMonster(monsterId) {
+        const idx = game.monsters.findIndex((m) => m.id === monsterId);
+        if (idx !== -1) {
+          const name = game.monsters[idx].name;
+          game.monsters.splice(idx, 1);
+          log(`🗑️ ${name} 삭제됨`);
+          renderStates();
+        }
+      }
+
       function makePlayer({ name, role, vit, atk, def, agi, actives, ult }) {
         const maxHp = 150 + vit * 10;
         return {
@@ -1227,8 +1249,11 @@
         target.debuffs = [];
       }
       function tickDots() {
-        // DOT 틱 - 불굴(tankingAll) 상태인 탱커가 있으면 대신 받음
+        // DOT 틱 - 불굴(tankingAll) 또는 수호(redirect) 상태면 탱커가 대신 받음
         const tankAll = game.players.find((p) => p.tankingAll && !p.down);
+
+        // 먼저 각 플레이어의 DOT를 수집하고, 누가 대신 받을지 결정
+        const dotDamages = []; // { target, bleed, other, originalPlayer }
 
         for (const p of game.players) {
           if (p.type !== "PLAYER") continue;
@@ -1247,76 +1272,123 @@
             d.turns -= 1;
             if (d.turns > 0) kept.push(d);
           }
+          p.dots = kept;
+
+          if (bleedTotal === 0 && otherTotal === 0) continue;
+
+          // 대신 받을 대상 결정: 불굴 > 수호 > 본인
+          let actualTarget = p;
+          let redirectReason = null;
+
+          if (tankAll && tankAll.id !== p.id) {
+            actualTarget = tankAll;
+            redirectReason = "불굴";
+          } else if (p.redirect && p.redirect.mode === "FULL") {
+            const tank = game.players.find(
+              (x) => x.id === p.redirect.tankId && !x.down
+            );
+            if (tank) {
+              actualTarget = tank;
+              redirectReason = "수호";
+            }
+          }
+
+          dotDamages.push({
+            originalPlayer: p,
+            target: actualTarget,
+            bleed: bleedTotal,
+            other: otherTotal,
+            redirectReason,
+          });
+        }
+
+        // 대상별로 피해 합산
+        const damageByTarget = new Map();
+        for (const dd of dotDamages) {
+          const key = dd.target.id;
+          if (!damageByTarget.has(key)) {
+            damageByTarget.set(key, {
+              target: dd.target,
+              bleed: 0,
+              other: 0,
+              sources: [],
+            });
+          }
+          const entry = damageByTarget.get(key);
+          entry.bleed += dd.bleed;
+          entry.other += dd.other;
+          if (dd.redirectReason) {
+            entry.sources.push({
+              name: dd.originalPlayer.name,
+              bleed: dd.bleed,
+              other: dd.other,
+              reason: dd.redirectReason,
+            });
+          }
+        }
+
+        // 합산된 피해 적용
+        for (const [targetId, entry] of damageByTarget) {
+          const t = entry.target;
 
           // 출혈(BLEED)은 방어 무시
-          if (bleedTotal > 0) {
-            // 불굴 탱커가 있고, 본인이 아니면 탱커가 대신 받음
-            if (tankAll && tankAll.id !== p.id) {
-              const res = applyDamage(tankAll, bleedTotal, {
-                sourceText: "BLEED",
-                ignoreDefense: true,
-                allowFloor: true, // HP 1 미만 불가
-              });
+          if (entry.bleed > 0) {
+            const res = applyDamage(t, entry.bleed, {
+              sourceText: "BLEED",
+              ignoreDefense: true,
+              allowFloor: t.tankingAll,
+            });
+
+            // 로그 생성
+            if (entry.sources.length > 0) {
+              const sourceInfo = entry.sources
+                .filter((s) => s.bleed > 0)
+                .map((s) => `${s.name}(${s.reason}):${s.bleed}`)
+                .join(" + ");
               log(
-                `🩸 ${p.name} 출혈 피해 ${bleedTotal} → ${tankAll.name}이 불굴로 대신 받음 (방어 무시, 실제 ${res.dealt})`
+                `🩸 ${t.name} 출혈 피해 ${entry.bleed} [${sourceInfo} + 본인] (방어 무시, 실제 ${res.dealt})`
               );
-              // 인내 누적
-              if (tankAll.endure) {
-                tankAll.endure.accum += res.dealt;
-                log(
-                  `   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`
-                );
-              }
             } else {
-              const res = applyDamage(p, bleedTotal, {
-                sourceText: "BLEED",
-                ignoreDefense: true,
-                allowFloor: p.tankingAll, // 본인이 불굴이면 HP 1 미만 불가
-              });
               log(
-                `🩸 ${p.name} 출혈 피해 ${bleedTotal} (방어 무시, 실제 ${res.dealt}, 보호막 ${res.absorbed})`
+                `🩸 ${t.name} 출혈 피해 ${entry.bleed} (방어 무시, 실제 ${res.dealt}, 보호막 ${res.absorbed})`
               );
-              // 인내 누적
-              if (p.endure) {
-                p.endure.accum += res.dealt;
-                log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
-              }
-              if (!p.tankingAll) setDownIfNeeded(p); // 불굴이면 다운 안됨
             }
+
+            // 인내 누적
+            if (t.endure) {
+              t.endure.accum += res.dealt;
+              log(`   ↳ 인내 누적: +${res.dealt} (총 ${t.endure.accum})`);
+            }
+            if (!t.tankingAll) setDownIfNeeded(t);
           }
 
           // 기타 DOT는 방어 적용
-          if (otherTotal > 0) {
-            if (tankAll && tankAll.id !== p.id) {
-              const res = applyDamage(tankAll, otherTotal, {
-                sourceText: "DOT",
-                allowFloor: true,
-              });
+          if (entry.other > 0) {
+            const res = applyDamage(t, entry.other, {
+              sourceText: "DOT",
+              allowFloor: t.tankingAll,
+            });
+
+            if (entry.sources.length > 0) {
+              const sourceInfo = entry.sources
+                .filter((s) => s.other > 0)
+                .map((s) => `${s.name}(${s.reason}):${s.other}`)
+                .join(" + ");
               log(
-                `🩸 ${p.name} DOT 피해 ${otherTotal} → ${tankAll.name}이 불굴로 대신 받음 (실제 ${res.dealt}, 경감 ${res.mitigated})`
+                `🩸 ${t.name} DOT 피해 ${entry.other} [${sourceInfo} + 본인] (실제 ${res.dealt}, 경감 ${res.mitigated})`
               );
-              if (tankAll.endure) {
-                tankAll.endure.accum += res.dealt;
-                log(
-                  `   ↳ 인내 누적: +${res.dealt} (총 ${tankAll.endure.accum})`
-                );
-              }
             } else {
-              const res = applyDamage(p, otherTotal, {
-                sourceText: "DOT",
-                allowFloor: p.tankingAll,
-              });
               log(
-                `🩸 ${p.name} DOT 피해 ${otherTotal} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+                `🩸 ${t.name} DOT 피해 ${entry.other} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
               );
-              if (p.endure) {
-                p.endure.accum += res.dealt;
-                log(`   ↳ 인내 누적: +${res.dealt} (총 ${p.endure.accum})`);
-              }
-              if (!p.tankingAll) setDownIfNeeded(p);
             }
+
+            if (t.endure) {
+              t.endure.accum += res.dealt;
+              log(`   ↳ 인내 누적: +${res.dealt} (총 ${t.endure.accum})`);
+            }
+            if (!t.tankingAll) setDownIfNeeded(t);
           }
-          p.dots = kept;
         }
 
         // 몬스터 DOT 처리 (DOT는 방어 무시)
@@ -1484,9 +1556,9 @@
         // Monster state
         const ms = document.getElementById("monsterState");
         if (game.monsters.length === 0) {
-          ms.textContent = "몬스터가 없습니다.";
+          ms.innerHTML = "몬스터가 없습니다.";
         } else {
-          const lines = [];
+          let html = "";
           for (const m of game.monsters) {
             const alive = m.alive ? "ALIVE" : "DEAD";
             const deb = m.debuffs
@@ -1495,7 +1567,7 @@
             const dot = m.dots
               .map((d) => `${d.type}:${d.value}(${d.turns})`)
               .join(", ");
-            lines.push(
+            const info =
               `${m.name} [${alive}] HP ${fmtHp(
                 m.hp,
                 m.maxHp
@@ -1503,19 +1575,22 @@
                 m,
                 "def"
               )} 민첩 ${effectiveStat(m, "agi")}` +
-                (deb ? ` | DEBUFF {${deb}}` : "") +
-                (dot ? ` | DOT {${dot}}` : "")
-            );
+              (deb ? ` | DEBUFF {${deb}}` : "") +
+              (dot ? ` | DOT {${dot}}` : "");
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid var(--line);">
+              <span style="flex:1;font-size:11px;">${info}</span>
+              <button onclick="deleteMonster('${m.id}')" style="background:#ff5d5d;border:none;color:#fff;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:10px;margin-left:8px;">✕</button>
+            </div>`;
           }
-          ms.textContent = lines.join("\n");
+          ms.innerHTML = html;
         }
 
         // Player state
         const ps = document.getElementById("playerState");
         if (game.players.length === 0) {
-          ps.textContent = "플레이어가 없습니다.";
+          ps.innerHTML = "플레이어가 없습니다.";
         } else {
-          const lines = [];
+          let html = "";
           for (const p of game.players) {
             const state = p.down ? `DOWN(${p.downCounter})` : "OK";
             const shields = p.shields
@@ -1527,7 +1602,7 @@
             const dot = p.dots
               .map((d) => `${d.type}:${d.value}(${d.turns})`)
               .join(", ");
-            lines.push(
+            const info =
               `${p.name} [${
                 ROLE_LABEL[p.role] || p.role
               }] [${state}] HP ${fmtHp(p.hp, p.maxHp)} | 체력 ${effectiveStat(
@@ -1537,13 +1612,16 @@
                 p,
                 "def"
               )} 민첩 ${effectiveStat(p, "agi")} | 치명타율 ${critChance(p)}%` +
-                (shields ? ` | SHIELD {${shields}}` : "") +
-                (deb ? ` | DEBUFF {${deb}}` : "") +
-                (dot ? ` | DOT {${dot}}` : "") +
-                (p.ultUsed ? ` | ULT USED` : "")
-            );
+              (shields ? ` | SHIELD {${shields}}` : "") +
+              (deb ? ` | DEBUFF {${deb}}` : "") +
+              (dot ? ` | DOT {${dot}}` : "") +
+              (p.ultUsed ? ` | ULT USED` : "");
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid var(--line);">
+              <span style="flex:1;font-size:11px;">${info}</span>
+              <button onclick="deletePlayer('${p.id}')" style="background:#ff5d5d;border:none;color:#fff;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:10px;margin-left:8px;">✕</button>
+            </div>`;
           }
-          ps.textContent = lines.join("\n");
+          ps.innerHTML = html;
         }
 
         // round chips
