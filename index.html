@@ -1285,7 +1285,7 @@
           p.dots = kept;
         }
         
-        // 몬스터 DOT 처리
+        // 몬스터 DOT 처리 (DOT는 방어 무시)
         for (const m of game.monsters) {
           if (!m.alive) continue;
           let total = 0;
@@ -1296,9 +1296,9 @@
             if (d.turns > 0) kept.push(d);
           }
           if (total > 0) {
-            const res = applyDamage(m, total, { sourceText: "DOT" });
+            const res = applyDamage(m, total, { sourceText: "DOT", ignoreDefense: true });
             log(
-              `🩸 ${m.name} DOT 피해 ${total} (실제 ${res.dealt}, 보호막 ${res.absorbed}, 경감 ${res.mitigated})`
+              `🩸 ${m.name} DOT 피해 ${total} (방어 무시, 실제 ${res.dealt}, 보호막 ${res.absorbed})`
             );
           }
           m.dots = kept;
