@@ -816,19 +816,19 @@
             {
               key: "OBSESSION",
               name: "집념",
-              desc: "3턴간 지정 적 1에게 기본 공격값×1d6 출혈 지속 피해",
+              desc: "3턴간 지정 적 1에게 기본 공격값*0.5 지속 피해(중첩 가능)",
               target: "ENEMY1",
             },
             {
               key: "BLOODFIGHT",
               name: "혈투",
-              desc: "현재 체력 50% 소모 후 지정 적 1에게 최종 공격값×2 공격",
+              desc: "현재 체력 50% 소모 후 지정 적 1에게 최종 공격값*1.5",
               target: "ENEMY1",
             },
             {
               key: "MASSACRE",
               name: "참살",
-              desc: "적 전체에게 최종 공격값×1d6×1.5 공격",
+              desc: "적 전체에게 최종 공격값*0.8",
               target: "ENEMY_ALL",
             },
           ],
@@ -836,13 +836,13 @@
             {
               key: "MERCY",
               name: "자비",
-              desc: "공격 다이스 2회 합산 후 최종 공격값×2.5 공격",
+              desc: "공격 다이스 2회 합산 후 최종 공격값*2",
               target: "ENEMY1",
             },
             {
               key: "CHARGE",
               name: "돌격",
-              desc: "방어 무시, 공격 다이스 2회 합산 후 최종 대미지×2 공격",
+              desc: "적 방어값 무시, 공격 다이스 2회 합산 후 ×1.5 공격",
               target: "ENEMY1",
             },
           ],
@@ -852,13 +852,13 @@
             {
               key: "REVIVE",
               name: "회생",
-              desc: "지정 1인 체력을 최종 민첩값×1.5×1d6 회복",
+              desc: "지정 1인 체력을 최종 민첩값 만큼 회복",
               target: "ALLY1",
             },
             {
               key: "BLESS",
               name: "가호",
-              desc: "지정 2인 체력을 최종 민첩값×1d6 회복",
+              desc: "지정 2인 체력을 최종 민첩값*0.5 만큼 회복",
               target: "ALLY2",
             },
             {
@@ -2392,8 +2392,8 @@
               );
               return;
             }
-            // 공격 다이스 2회 합산 후 최종 공격값×2.5
-            doAttack(p, m, { diceTwice: true, mult: 2.5, label: "자비" });
+            // attack dice twice sum then *2
+            doAttack(p, m, { diceTwice: true, mult: 2.0, label: "자비" });
             return;
           }
           if (type === "ULT" && key === "CHARGE") {
@@ -2402,9 +2402,8 @@
               log(`⚠️ ${p.name} [궁극기:돌격]이 실패합니다. 대상이 없습니다.`);
               return;
             }
-            // 방어 무시, 공격 다이스 2회 합산 후 최종 대미지×2
             doAttack(p, m, {
-              mult: 2.0,
+              mult: 1.5,
               ignoreDefense: true,
               diceTwice: true,
               label: "돌격(방어무시)",
@@ -2426,18 +2425,16 @@
               log(`⚠️ ${p.name} [스킬:집념]이 실패했습니다. 대상이 없습니다.`);
               return;
             }
-            // 기본 공격값×1d6 출혈 DOT
-            const baseAtk = p.stats.atk;
-            const roll = d6();
-            const dotVal = baseAtk * roll;
+            const atkResult = baseAttackDamage(p);
+            const dotVal = Math.floor(atkResult.damage * 0.5);
             addDot(m, {
-              type: "BLEED",
+              type: "OBSESSION",
               value: dotVal,
               turns: 3,
               sourceId: p.id,
             });
             log(
-              `🩸 ${p.name} 집념 → ${m.name}\n   [기본 공격 ${baseAtk}×${roll}(1d6)=${dotVal}] 출혈 ${dotVal}/턴 ×3턴 (방어 무시)`
+              `🩸 ${p.name} 집념 → ${m.name}\n   [공격 ${atkResult.atk}×${atkResult.roll}(1d6)×0.5=${dotVal}] DOT ${dotVal}/턴 ×3턴 (중첩 가능)`
             );
             return;
           }
@@ -2449,26 +2446,32 @@
               return;
             }
             const cost = Math.ceil(p.hp * 0.5);
-            p.hp = Math.max(1, p.hp - cost);
-            log(`🩸 ${p.name} [스킬:혈투] 발동! HP ${cost} 소모 (현재 HP: ${p.hp})`);
-            // 최종 공격값×2 공격
-            doAttack(p, m, { mult: 2.0, label: "혈투" });
+            p.hp = Math.max(0, p.hp - cost);
+            log(`🩸 ${p.name} [스킬:혈투] 발동!: HP ${cost} 가 소모됩니다!`);
+            setDownIfNeeded(p);
+            if (p.down) {
+              log(
+                `⚠️ ${p.name}이(가)[스킬:혈투]를 사용했으나 다운되어 공격이 불발되었습니다!`
+              );
+              return;
+            }
+            doAttack(p, m, { mult: 2, label: "혈투" });
             return;
           }
 
           if (type === "ACTIVE" && key === "MASSACRE") {
-            // 최종 공격값×1d6×1.5 적 전체 공격
             const atk = effectiveStat(p, "atk");
             const roll = d6();
-            const dmg = Math.floor(atk * roll * 1.5);
+            const fAtk = atk * roll;
+            const dmg = Math.floor(fAtk * 1);
             log(
-              `⚔️ ${p.name} 참살: 적 전체 공격\n   [공격 ${atk}×${roll}(1d6)×1.5=${dmg}]`
+              `⚔️ ${p.name} 참살: 적 전체 공격\n   [공격 ${atk}×${roll}(1d6)=${dmg}]`
             );
             for (const mm of game.monsters.filter((x) => x.alive)) {
               const res = applyDamage(mm, dmg, { ignoreDefense: false });
               let logMsg = `   ↳ ${mm.name}`;
               if (res.defFormula) logMsg += ` [${res.defFormula}]`;
-              logMsg += ` 피해 ${dmg}, 실제 ${res.dealt} (보호막 ${res.absorbed}, 경감 ${res.mitigated})`;
+              logMsg += ` 데미지 ${dmg}, 실제 피해량 ${res.dealt} (보호막 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
               log(logMsg);
             }
             return;
@@ -2509,10 +2512,9 @@
               log(`⚠️ ${p.name} [스킬:회생] 실패! 대상 없음`);
               return;
             }
-            // 최종 민첩×1.5×1d6 회복
             const agi = effectiveStat(p, "agi");
             const roll = d6();
-            let amount = Math.floor(agi * 1.5 * roll);
+            let amount = agi * roll;
             let critText = "";
 
             // 크리티컬 체크
@@ -2522,9 +2524,13 @@
               log(`✨ CRIT! ${p.name} (회생)`);
             }
 
-            const healed = heal(ally, amount);
+            const healed = heal(ally, Math.floor(amount));
             log(
-              `💚 ${p.name}가 [스킬:회생]으로 ${ally.name}\n   [민첩 ${agi}×1.5×${roll}(1d6)=${Math.floor(agi * 1.5 * roll)}${critText}] 실제 회복 ${healed}`
+              `💚 ${p.name}가 [스킬: 회생]으로 ${
+                ally.name
+              }\n   [민첩 ${agi}×${roll}(1d6)=${
+                agi * roll
+              }${critText}] 실제 회복 ${healed}`
             );
             return;
           }
@@ -2537,10 +2543,10 @@
               log(`⚠️ ${p.name} 가호 실패: 대상 없음`);
               return;
             }
-            // 최종 민첩×1d6×1 회복 (2인)
             const agi = effectiveStat(p, "agi");
             const roll = d6();
-            let amount = agi * roll;
+            let baseAmount = Math.floor(agi * roll * 0.5);
+            let amount = baseAmount;
             let critText = "";
 
             // 크리티컬 체크
@@ -2551,7 +2557,7 @@
             }
 
             log(
-              `💚 ${p.name}의 [스킬:가호] 발동\n   [민첩 ${agi}×${roll}(1d6)=${agi * roll}${critText}]`
+              `💚 ${p.name}의 [스킬:가호] 발동\n   [민첩 ${agi}×${roll}(1d6)×0.5=${baseAmount}${critText}]`
             );
             for (const t of targets) {
               const healed = heal(t, amount);
