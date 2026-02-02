@@ -439,7 +439,7 @@
         </header>
 
         <div class="card">
-          <h3>§캐릭터 생성§</h3>
+          <h3>▶캐릭터 생성</h3>
 
           <div class="row">
             <div class="col">
@@ -1138,7 +1138,23 @@
           if (player.downCounter === 0) {
             player.down = false;
             player.hp = Math.max(1, Math.floor(player.maxHp * 0.3));
-            log(`↺ ${player.name} 소생: HP ${player.hp}/${player.maxHp} (30%)`);
+            
+            // 부활 시 디버프/DOT/스킬 상태 초기화
+            player.debuffs = [];
+            player.dots = [];
+            player.temp = { atkPlus: 0, defPlus: 0, agiPlus: 0, vitPlus: 0 };
+            player.lastActiveKey = null;
+            player.endure = null;
+            player.fightingSpirit = null;
+            player.pendingAtkPlusNext = 0;
+            player.pendingEncourage = [];
+            player.tankingAll = false;
+            player.minHpFloor = false;
+            player.redirect = null;
+            player.hasAggro = false;
+            player._defendBonus = 0;
+            
+            log(`↺ ${player.name} 소생: HP ${player.hp}/${player.maxHp} (30%) - 디버프/스킬 초기화`);
           }
         } else {
           // apply "madness" pending atk+ for this round start
@@ -1850,10 +1866,10 @@
               text: `${m.name}는 ${t.name}(을)를 노려보고 있다. (단일 공격)`,
             });
           } else if (r < 0.5) {
-            // 광역공격 1~3인 - 어그로 적용
+            // 광역공격 2~4인 - 어그로 적용
             const n = Math.min(
               alivePlayers.length,
-              Math.floor(Math.random() * 3) + 1
+              Math.floor(Math.random() * 3) + 2
             );
             const targets = selectTargetsWithAggro(n);
             const targetNames = targets.map((t) => t.name).join(", ");
@@ -1865,10 +1881,10 @@
               text: `${m.name}는 ${targetNames}(을)를 향해 눈을 굴리고 있다. (광역 ${n}인)`,
             });
           } else if (r < 0.75) {
-            // bleeding 1~8 - 어그로 적용
+            // bleeding 2~3 - 어그로 적용
             const n = Math.min(
               alivePlayers.length,
-              Math.floor(Math.random() * 8) + 1
+              Math.floor(Math.random() * 2) + 2
             );
             const targets = selectTargetsWithAggro(n);
             const targetNames = targets.map((t) => t.name).join(", ");
