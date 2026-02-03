@@ -450,7 +450,7 @@
         </header>
 
         <div class="card">
-          <h3>º캐릭터 생성º</h3>
+          <h3>⚔️캐릭터 생성⚔️</h3>
 
           <div class="row">
             <div class="col">
@@ -548,6 +548,27 @@
             <div class="col">
               <label>민첩</label>
               <input id="mAgi" type="number" min="1" max="20" value="6" />
+            </div>
+          </div>
+
+          <div class="hr"></div>
+          <small class="muted">공격 패턴 비율 (합계 100%)</small>
+          <div class="row">
+            <div class="col">
+              <label>단일(%)</label>
+              <input id="mPatSingle" type="number" min="0" max="100" value="25" style="width:50px" />
+            </div>
+            <div class="col">
+              <label>광역(%)</label>
+              <input id="mPatAoe" type="number" min="0" max="100" value="25" style="width:50px" />
+            </div>
+            <div class="col">
+              <label>출혈(%)</label>
+              <input id="mPatBleed" type="number" min="0" max="100" value="25" style="width:50px" />
+            </div>
+            <div class="col">
+              <label>버프(%)</label>
+              <input id="mPatBuff" type="number" min="0" max="100" value="25" style="width:50px" />
             </div>
           </div>
 
@@ -780,13 +801,13 @@
             {
               key: "GUARD",
               name: "호위",
-              desc: "1턴간 지정 2인에게 자신의 최종 방어 값*0.5 보호막",
+              desc: "1턴간 지정 2인에게 자신의 최종 방어 값×1d6×0.8 보호막",
               target: "ALLY2",
             },
             {
               key: "PROTECT",
               name: "수호",
-              desc: "1턴간 지정 1인의 피해를 대신 받아낸다. 이 때, 시전자의 방어값은 1.3배 추가된다.",
+              desc: "1턴간 지정 1인의 피해를 대신 받음. 방어 보너스: def×1.3×1d6",
               target: "ALLY1",
             },
             {
@@ -828,7 +849,7 @@
             {
               key: "OBSESSION",
               name: "집념",
-              desc: "3턴간 지정 적 1에게 기본 공격값만큼 지속 피해(중첩 가능)",
+              desc: "3턴간 지정 적 1에게 기본 공격값×1d6×0.8 지속 피해(중첩 가능)",
               target: "ENEMY1",
             },
             {
@@ -972,7 +993,7 @@
         };
       }
 
-      function makeMonster({ name, vit, atk, def, agi, hpBase }) {
+      function makeMonster({ name, vit, atk, def, agi, hpBase, patterns }) {
         const maxHp = hpBase; // monster HP is manual base as requested
         return {
           id: makeId("M"),
@@ -987,7 +1008,8 @@
           debuffs: [],
           dots: [],
           shields: [],
-          // monster-specific
+          // 공격 패턴 비율 (기본값: 각 25%)
+          patterns: patterns || { single: 25, aoe: 25, bleed: 25, buff: 25 },
         };
       }
 
@@ -1081,6 +1103,7 @@
           sourceText = "",
           allowFloor = false,
           defMult = 1.0,
+          defBonus = 0,
         } = {}
       ) {
         if (defender.type === "MONSTER" && !defender.alive)
@@ -1098,17 +1121,20 @@
 
         if (!ignoreDefense) {
           const mitResult = baseDefenseMitigation(defender, defMult);
-          const mit = mitResult.mitigation;
+          let mit = mitResult.mitigation;
+          
+          // 수호 방어 보너스 추가
+          if (defBonus > 0) {
+            mit += defBonus;
+            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})+수호보너스${defBonus}=${mit}`;
+          } else if (defMult !== 1.0) {
+            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})×${defMult}=${mit}`;
+          } else {
+            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})=${mit}`;
+          }
+          
           mitigated += Math.min(mit, dmg);
           dmg = Math.max(0, dmg - mit);
-
-          // 방어 수식 기록
-          const diceType = mitResult.diceType || "1d2";
-          if (defMult !== 1.0) {
-            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${diceType})×${defMult}=${mit}`;
-          } else {
-            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${diceType})=${mit}`;
-          }
         }
 
         // defend action adds extra mitigation stored on defender this round
@@ -1982,8 +2008,19 @@
         const intents = [];
 
         for (const m of aliveMonsters) {
+          // 몬스터별 패턴 비율 사용
+          const pat = m.patterns || { single: 25, aoe: 25, bleed: 25, buff: 25 };
+          const total = pat.single + pat.aoe + pat.bleed + pat.buff;
+          
+          // 비율이 0이면 기본값 사용
+          const singleThreshold = pat.single / total;
+          const aoeThreshold = singleThreshold + pat.aoe / total;
+          const bleedThreshold = aoeThreshold + pat.bleed / total;
+          // buff는 나머지
+          
           const r = Math.random();
-          if (r < 0.25) {
+          
+          if (r < singleThreshold) {
             // 단일 공격 - 어그로 적용
             const targets = selectTargetsWithAggro(1);
             const t = targets[0];
@@ -1993,7 +2030,7 @@
               targetIds: [t.id],
               text: `${m.name}는 ${t.name}(을)를 노려보고 있다. (단일 공격)`,
             });
-          } else if (r < 0.5) {
+          } else if (r < aoeThreshold) {
             // 광역공격 2~4인 - 어그로 적용
             const n = Math.min(
               alivePlayers.length,
@@ -2008,7 +2045,7 @@
               targetIds: targets.map((x) => x.id),
               text: `${m.name}는 ${targetNames}(을)를 향해 눈을 굴리고 있다. (광역 ${n}인)`,
             });
-          } else if (r < 0.75) {
+          } else if (r < bleedThreshold) {
             // bleeding 2~3 - 어그로 적용
             const n = Math.min(
               alivePlayers.length,
@@ -2436,7 +2473,7 @@
             const def = effectiveStat(p, "def");
             const roll = d6();
             const fDef = def * roll;
-            let baseShield = Math.floor(fDef * 0.5);
+            let baseShield = Math.floor(fDef * 0.8);
             let shield = baseShield;
             let critText = "";
 
@@ -2448,7 +2485,7 @@
             }
 
             log(
-              `🛡️ ${p.name}의 [호위] 스킬 발동\n   [방어 ${def}×${roll}(1d6)×0.5=${baseShield}${critText} 보호막]`
+              `🛡️ ${p.name}의 [호위] 스킬 발동\n   [방어 ${def}×${roll}(1d6)×0.8=${baseShield}${critText} 보호막]`
             );
             for (const t of targets) {
               // no stacking same active: just add shield but you can choose to overwrite; here we add.
@@ -2469,12 +2506,19 @@
               return;
             }
 
-            // 크리티컬 체크 - 방어 배율 증가
-            let defMult = 1.3;
+            // 1d6 다이스 굴림
+            const roll = d6();
+            const def = effectiveStat(p, "def");
+            
+            // 기본 수식: def × 1.3 × roll
+            let baseDefBonus = Math.floor(def * 1.3 * roll);
+            let finalDefBonus = baseDefBonus;
             let critText = "";
+            
+            // 크리티컬 체크 - 최종 결과 ×2
             if (pct(critChance(p))) {
-              defMult = 2.6; // 1.3 × 2
-              critText = " (민첩한 몸놀림! 방어 2.6배 적용!)";
+              finalDefBonus = baseDefBonus * 2;
+              critText = ` ×2(치명타)=${finalDefBonus}`;
               log(`✨ CRIT! ${p.name} (수호)`);
             }
 
@@ -2482,12 +2526,12 @@
             ally.redirect = {
               tankId: p.id,
               mode: "FULL",
-              defMult: defMult,
-              expiresRound: game.round, // 선택: 라운드 종료 시 정리할 때 쓰기 좋음
+              defBonus: finalDefBonus, // 방어 보너스로 변경
+              expiresRound: game.round,
             };
 
             log(
-              `🛡️ ${p.name} 의 [수호] 스킬 사용! → ${ally.name} : 이번 턴 몬스터 공격/효과를 ${p.name}이 대신 받습니다. (방어 ${defMult}배)${critText}`
+              `🛡️ ${p.name} 의 [수호] 스킬 사용! → ${ally.name}\n   [방어 ${def}×1.3×${roll}(1d6)=${baseDefBonus}${critText}] 방어 보너스 적용`
             );
             return;
           }
@@ -2570,7 +2614,7 @@
               return;
             }
             const atkResult = baseAttackDamage(p);
-            const dotVal = Math.floor(atkResult.damage * 1);
+            const dotVal = Math.floor(atkResult.damage * 0.8);
             addDot(m, {
               type: "OBSESSION",
               value: dotVal,
@@ -2578,7 +2622,7 @@
               sourceId: p.id,
             });
             log(
-              `🩸 ${p.name} 집념 → ${m.name}\n   [공격 ${atkResult.atk}×${atkResult.roll}(1d6)×1=${dotVal}] DOT ${dotVal}/턴 ×3턴 (중첩 가능)`
+              `🩸 ${p.name} 집념 → ${m.name}\n   [공격 ${atkResult.atk}×${atkResult.roll}(1d6)×0.8=${dotVal}] DOT ${dotVal}/턴 ×3턴 (중첩 가능)`
             );
             return;
           }
@@ -3008,12 +3052,12 @@
         ) {
           const tank = pickPlayerById(target.redirect.tankId);
           if (tank && !tank.down) {
-            const defMult = target.redirect.defMult ?? 1.3;
+            const defBonus = target.redirect.defBonus ?? 0;
 
             const res = applyDamage(tank, raw, {
               ignoreDefense: false,
               allowFloor: tank.minHpFloor,
-              defMult, // ← 수호의 핵심: 방어 1.3배
+              defBonus, // ← 수호의 핵심: 방어 보너스 추가
             });
 
             let logMsg = `👹 ${monster.name} → ${target.name} (${label}, [스킬:수호]를 사용한 ${tank.name}이(가) 데미지를 대신 받아냅니다!)\n`;
@@ -3225,9 +3269,22 @@
         const def = clamp(+document.getElementById("mDef").value, 1, 20);
         const agi = clamp(+document.getElementById("mAgi").value, 1, 20);
 
-        const m = makeMonster({ name, vit, atk, def, agi, hpBase });
+        // 공격 패턴 비율 읽기
+        const patSingle = Math.max(0, +document.getElementById("mPatSingle").value || 25);
+        const patAoe = Math.max(0, +document.getElementById("mPatAoe").value || 25);
+        const patBleed = Math.max(0, +document.getElementById("mPatBleed").value || 25);
+        const patBuff = Math.max(0, +document.getElementById("mPatBuff").value || 25);
+        
+        const patterns = {
+          single: patSingle,
+          aoe: patAoe,
+          bleed: patBleed,
+          buff: patBuff
+        };
+
+        const m = makeMonster({ name, vit, atk, def, agi, hpBase, patterns });
         game.monsters.push(m);
-        log(`+ 몬스터 추가: ${m.name} HP ${m.maxHp}`);
+        log(`+ 몬스터 추가: ${m.name} HP ${m.maxHp} | 패턴: 단일${patSingle}% 광역${patAoe}% 출혈${patBleed}% 버프${patBuff}%`);
         renderPlayerActionCards();
         renderStates();
       });
