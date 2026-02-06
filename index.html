@@ -450,7 +450,7 @@
         </header>
 
         <div class="card">
-          <h3>⚔️캐릭터 생성⚔️</h3>
+          <h3>⚔️캐릭터 생성</h3>
 
           <div class="row">
             <div class="col">
@@ -1119,18 +1119,21 @@
         let mitigated = 0;
         let defFormula = "";
 
+        // 수호 방어 보너스는 ignoreDefense와 별개로 항상 적용
+        if (defBonus > 0) {
+          mitigated += Math.min(defBonus, dmg);
+          dmg = Math.max(0, dmg - defBonus);
+          defFormula = `수호 방어 보너스 ${defBonus}`;
+        }
+
         if (!ignoreDefense) {
           const mitResult = baseDefenseMitigation(defender, defMult);
           let mit = mitResult.mitigation;
           
-          // 수호 방어 보너스 추가
-          if (defBonus > 0) {
-            mit += defBonus;
-            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})+수호보너스${defBonus}=${mit}`;
-          } else if (defMult !== 1.0) {
-            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})×${defMult}=${mit}`;
+          if (defMult !== 1.0) {
+            defFormula += (defFormula ? " + " : "") + `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})×${defMult}=${mit}`;
           } else {
-            defFormula = `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})=${mit}`;
+            defFormula += (defFormula ? " + " : "") + `방어 ${mitResult.def}×${mitResult.roll}(${mitResult.diceType || "1d2"})=${mit}`;
           }
           
           mitigated += Math.min(mit, dmg);
@@ -2702,23 +2705,20 @@
             }
             const agi = effectiveStat(p, "agi");
             const roll = d6();
-            let amount = agi * roll * 1.5;
+            const baseAmount = Math.floor(agi * roll * 1.5);
+            let amount = baseAmount;
             let critText = "";
 
             // 크리티컬 체크
             if (pct(critChance(p))) {
-              amount = amount * 2;
-              critText = " ×2(치명타)";
+              amount = baseAmount * 2;
+              critText = ` ×2(치명타)=${amount}`;
               log(`✨ CRIT! ${p.name} (회생)`);
             }
 
-            const healed = heal(ally, Math.floor(amount));
+            const healed = heal(ally, amount);
             log(
-              `💚 ${p.name}가 [스킬: 회생]으로 ${
-                ally.name
-              }\n   [민첩 ${agi}×${roll}(1d6)×1.5=${
-                agi * roll
-              }${critText}] 실제 회복 ${healed}`
+              `💚 ${p.name}가 [스킬:회생]으로 ${ally.name}\n   [민첩 ${agi}×${roll}(1d6)×1.5=${baseAmount}${critText}] 실제 회복 ${healed}`
             );
             return;
           }
@@ -2889,30 +2889,11 @@
               .map((id) => game.players.find((p) => p.id === id))
               .filter(Boolean);
 
-            // 수호로 인해 이미 피해를 받은 플레이어 추적
-            const alreadyDamaged = new Set();
-
+            // 1단계: 각 대상별로 피해 정보 수집
+            const damageInfos = [];
+            
             for (const t of targets) {
               if (t.down) continue;
-
-              // 수호 체크: 수호 대상이면 탱커가 대신 맞음
-              let actualTarget = t;
-              if (t.redirect && t.redirect.mode === "FULL") {
-                const tank = pickPlayerById(t.redirect.tankId);
-                if (tank && !tank.down) {
-                  actualTarget = tank;
-                }
-              }
-
-              // 이미 이번 AOE에서 피해를 받은 대상이면 스킵
-              if (alreadyDamaged.has(actualTarget.id)) {
-                log(
-                  `🛡️ ${t.name}에 대한 공격은 ${actualTarget.name}이 이미 대신 받음 (중복 피해 방지)`
-                );
-                continue;
-              }
-
-              alreadyDamaged.add(actualTarget.id);
 
               const atk = effectiveStat(m, "atk");
               const roll = d6();
@@ -2921,7 +2902,74 @@
               const atkFormula = `공격 ${atk}×${roll}(1d6)=${baseRaw}${
                 raw !== baseRaw ? ` (참회 적용 후 ${raw})` : ""
               }`;
-              dealMonsterDamage(m, t, raw, { label: "광역공격", atkFormula });
+
+              // 수호 체크
+              let isRedirected = false;
+              let tank = null;
+              let defBonus = 0;
+              
+              if (t.redirect && t.redirect.mode === "FULL") {
+                tank = pickPlayerById(t.redirect.tankId);
+                if (tank && !tank.down) {
+                  isRedirected = true;
+                  defBonus = t.redirect.defBonus ?? 0;
+                }
+              }
+
+              damageInfos.push({
+                originalTarget: t,
+                tank,
+                isRedirected,
+                defBonus,
+                raw,
+                atkFormula
+              });
+            }
+
+            // 2단계: 각 피해 처리 (수호 피해와 본인 피해 분리)
+            const processedOwnDamage = new Set(); // 본인 피해로 처리된 대상
+            
+            for (const info of damageInfos) {
+              const { originalTarget, tank, isRedirected, defBonus, raw, atkFormula } = info;
+              
+              if (isRedirected && tank) {
+                // 수호로 대신 받는 피해 - 수호 보너스만 적용
+                const res = applyDamage(tank, raw, {
+                  ignoreDefense: true,
+                  allowFloor: tank.minHpFloor,
+                  defBonus,
+                });
+
+                let logMsg = `👹 ${m.name} → ${originalTarget.name} (광역공격, [스킬:수호] ${tank.name}이(가) 대신 받음)\n`;
+                logMsg += `   [${atkFormula}]\n`;
+                logMsg += `   [수호 방어 보너스 ${defBonus}]\n`;
+                logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
+                log(logMsg);
+
+                if (tank.endure) tank.endure.accum += res.dealt;
+                setDownIfNeeded(tank);
+              } else {
+                // 본인이 직접 받는 피해 - 일반 방어 적용 (중복 방지)
+                if (processedOwnDamage.has(originalTarget.id)) {
+                  continue; // 이미 본인 피해로 처리됨
+                }
+                processedOwnDamage.add(originalTarget.id);
+                
+                const res = applyDamage(originalTarget, raw, {
+                  ignoreDefense: false,
+                  allowFloor: originalTarget.minHpFloor,
+                  defMult: 1.0,
+                });
+
+                let logMsg = `👹 ${m.name} → ${originalTarget.name} (광역공격)\n`;
+                logMsg += `   [${atkFormula}]\n`;
+                if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
+                logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
+                log(logMsg);
+
+                if (originalTarget.endure) originalTarget.endure.accum += res.dealt;
+                setDownIfNeeded(originalTarget);
+              }
             }
             continue;
           }
@@ -2961,23 +3009,39 @@
               const roll = Math.floor(Math.random() * 2) + 1; // 1d2
               const dotValue = atk * roll;
 
+              // DOT 등록 (3턴 - 첫 틱은 즉시 적용하므로 2턴 남음)
               addDot(dotTarget, {
                 type: "BLEED",
                 value: dotValue,
-                turns: 3,
+                turns: 2, // 첫 틱 즉시 적용, 나머지 2턴
                 sourceId: m.id,
+              });
+
+              // 즉시 첫 번째 출혈 피해 적용
+              const bleedRes = applyDamage(dotTarget, dotValue, {
+                ignoreDefense: true,
+                sourceText: "BLEED",
+                allowFloor: dotTarget.tankingAll,
               });
 
               const atkFormula = `공격 ${atk}×${roll}(1d2)=${dotValue}`;
               if (redirected) {
                 log(
-                  `🩸 ${m.name}의 출혈 공격 → ${t.name} ([스킬:${redirectReason}] ${dotTarget.name}이(가) 대신 받음)\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
+                  `🩸 ${m.name}의 출혈 공격 → ${t.name} ([스킬:${redirectReason}] ${dotTarget.name}이(가) 대신 받음)\n   [${atkFormula}] 즉시 출혈 피해 ${dotValue} (실제 ${bleedRes.dealt}) + 2턴 지속 (방어 무시)`
                 );
               } else {
                 log(
-                  `🩸 ${m.name}의 출혈 공격 → ${dotTarget.name}\n   [${atkFormula}] 출혈 ${dotValue}/턴 ×3턴 (방어 무시)`
+                  `🩸 ${m.name}의 출혈 공격 → ${dotTarget.name}\n   [${atkFormula}] 즉시 출혈 피해 ${dotValue} (실제 ${bleedRes.dealt}) + 2턴 지속 (방어 무시)`
                 );
               }
+              
+              // 인내 누적
+              if (dotTarget.endure) {
+                dotTarget.endure.accum += bleedRes.dealt;
+                log(`   ↳ 인내 누적: +${bleedRes.dealt} (총 ${dotTarget.endure.accum})`);
+              }
+              
+              if (!dotTarget.tankingAll) setDownIfNeeded(dotTarget);
             }
             continue;
           }
@@ -2988,6 +3052,14 @@
           if (p.endure) {
             p.endure.turnsLeft -= 1;
             if (p.endure.turnsLeft <= 0) {
+              // 다운된 캐릭터는 반사 실패
+              if (p.down) {
+                log(`🧱 ${p.name}의 [스킬:인내] 종료: 다운 상태로 반사 실패`);
+                p.endure = null;
+                p.hasAggro = false;
+                continue;
+              }
+              
               const dmg = Math.floor(p.endure.accum * 0.5);
               const target = firstAliveMonster();
               if (target && dmg > 0) {
@@ -3055,14 +3127,14 @@
             const defBonus = target.redirect.defBonus ?? 0;
 
             const res = applyDamage(tank, raw, {
-              ignoreDefense: false,
+              ignoreDefense: true, // 기본 방어 경감 제거
               allowFloor: tank.minHpFloor,
-              defBonus, // ← 수호의 핵심: 방어 보너스 추가
+              defBonus, // ← 수호의 핵심: 방어 보너스만 적용
             });
 
             let logMsg = `👹 ${monster.name} → ${target.name} (${label}, [스킬:수호]를 사용한 ${tank.name}이(가) 데미지를 대신 받아냅니다!)\n`;
             if (atkFormula) logMsg += `   [${atkFormula}]\n`;
-            if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
+            logMsg += `   [수호 방어 보너스 ${defBonus}]\n`;
             logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
             log(logMsg);
 
@@ -3088,6 +3160,31 @@
 
         if (target.endure) target.endure.accum += res.dealt;
         setDownIfNeeded(target);
+      }
+
+      // 수호로 리다이렉트된 경우 전용 처리 함수
+      function dealMonsterDamageWithProtect(
+        monster,
+        originalTarget,
+        tank,
+        raw,
+        defBonus,
+        { label = "", atkFormula = "" } = {}
+      ) {
+        const res = applyDamage(tank, raw, {
+          ignoreDefense: true, // 기본 방어 경감 제거
+          allowFloor: tank.minHpFloor,
+          defBonus, // 수호 방어 보너스만 적용
+        });
+
+        let logMsg = `👹 ${monster.name} → ${originalTarget.name} (${label}, [스킬:수호] ${tank.name}이(가) 대신 받음)\n`;
+        if (atkFormula) logMsg += `   [${atkFormula}]\n`;
+        logMsg += `   [수호 방어 보너스 ${defBonus}]\n`;
+        logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
+        log(logMsg);
+
+        if (tank.endure) tank.endure.accum += res.dealt;
+        setDownIfNeeded(tank);
       }
 
       /* =========================
