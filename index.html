@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Monster Raid (Vanilla JS)</title>
+    <title>Monster Raid (Vanilla JS ver.3.6.0)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
       :root {
@@ -450,7 +450,7 @@
         </header>
 
         <div class="card">
-          <h3>⚔️캐릭터 생성</h3>
+          <h3>⚔️캐릭터 생성⚔️</h3>
 
           <div class="row">
             <div class="col">
@@ -2015,11 +2015,22 @@
           const pat = m.patterns || { single: 25, aoe: 25, bleed: 25, buff: 25 };
           const total = pat.single + pat.aoe + pat.bleed + pat.buff;
           
-          // 비율이 0이면 기본값 사용
+          // total이 0이면 기본 단일 공격
+          if (total === 0) {
+            const targets = selectTargetsWithAggro(1);
+            const t = targets[0];
+            intents.push({
+              monsterId: m.id,
+              type: "SINGLE",
+              targetIds: [t.id],
+              text: `${m.name}는 ${t.name}(을)를 노려보고 있다. (단일 공격)`,
+            });
+            continue;
+          }
+          
           const singleThreshold = pat.single / total;
           const aoeThreshold = singleThreshold + pat.aoe / total;
           const bleedThreshold = aoeThreshold + pat.bleed / total;
-          // buff는 나머지
           
           const r = Math.random();
           
@@ -2062,8 +2073,8 @@
               targetIds: targets.map((x) => x.id),
               text: `${targetNames}을(를) 노려보고 있는 ${m.name}은 옷과 피부를 찢어버릴 태세이다. (출혈 ${n}인, 3턴 지속, 방어 무시)`,
             });
-          } else {
-            // self buff
+          } else if (pat.buff > 0) {
+            // self buff - 버프 비율이 0보다 클 때만
             const stats = ["atk", "def", "agi"];
             const s = stats[Math.floor(Math.random() * stats.length)];
             intents.push({
@@ -2073,6 +2084,16 @@
               text: `${
                 m.name
               }는 한발 물러서서 태세를 재정비합니다. (자가버프: ${s.toUpperCase()})`,
+            });
+          } else {
+            // fallback: 버프가 0%인데 여기까지 왔으면 단일 공격
+            const targets = selectTargetsWithAggro(1);
+            const t = targets[0];
+            intents.push({
+              monsterId: m.id,
+              type: "SINGLE",
+              targetIds: [t.id],
+              text: `${m.name}는 ${t.name}(을)를 노려보고 있다. (단일 공격)`,
             });
           }
         }
@@ -2889,6 +2910,9 @@
               .map((id) => game.players.find((p) => p.id === id))
               .filter(Boolean);
 
+            // 불굴(전체 대신맞기) 체크
+            const tankAll = game.players.find((p) => p.tankingAll && !p.down);
+
             // 1단계: 각 대상별로 피해 정보 수집
             const damageInfos = [];
             
@@ -2903,15 +2927,24 @@
                 raw !== baseRaw ? ` (참회 적용 후 ${raw})` : ""
               }`;
 
-              // 수호 체크
+              // 1) 불굴 체크 (최우선)
+              // 2) 수호 체크
               let isRedirected = false;
+              let redirectReason = "";
               let tank = null;
               let defBonus = 0;
               
-              if (t.redirect && t.redirect.mode === "FULL") {
+              if (tankAll && tankAll.id !== t.id) {
+                // 불굴: 탱커가 모든 피해 대신 받음
+                isRedirected = true;
+                redirectReason = "불굴";
+                tank = tankAll;
+                defBonus = 0; // 불굴은 일반 방어 적용
+              } else if (t.redirect && t.redirect.mode === "FULL") {
                 tank = pickPlayerById(t.redirect.tankId);
                 if (tank && !tank.down) {
                   isRedirected = true;
+                  redirectReason = "수호";
                   defBonus = t.redirect.defBonus ?? 0;
                 }
               }
@@ -2920,34 +2953,43 @@
                 originalTarget: t,
                 tank,
                 isRedirected,
+                redirectReason,
                 defBonus,
                 raw,
                 atkFormula
               });
             }
 
-            // 2단계: 각 피해 처리 (수호 피해와 본인 피해 분리)
+            // 2단계: 각 피해 처리 (불굴/수호 피해와 본인 피해 분리)
             const processedOwnDamage = new Set(); // 본인 피해로 처리된 대상
+            let tankAllTotalDamage = 0; // 불굴 탱커가 받은 총 피해
+            const tankAllSources = []; // 불굴로 대신 받은 피해 출처
             
             for (const info of damageInfos) {
-              const { originalTarget, tank, isRedirected, defBonus, raw, atkFormula } = info;
+              const { originalTarget, tank, isRedirected, redirectReason, defBonus, raw, atkFormula } = info;
               
               if (isRedirected && tank) {
-                // 수호로 대신 받는 피해 - 수호 보너스만 적용
-                const res = applyDamage(tank, raw, {
-                  ignoreDefense: true,
-                  allowFloor: tank.minHpFloor,
-                  defBonus,
-                });
+                if (redirectReason === "불굴") {
+                  // 불굴: 나중에 합산해서 처리
+                  tankAllTotalDamage += raw;
+                  tankAllSources.push({ name: originalTarget.name, raw, atkFormula });
+                } else {
+                  // 수호로 대신 받는 피해 - 수호 보너스만 적용
+                  const res = applyDamage(tank, raw, {
+                    ignoreDefense: true,
+                    allowFloor: tank.minHpFloor,
+                    defBonus,
+                  });
 
-                let logMsg = `👹 ${m.name} → ${originalTarget.name} (광역공격, [스킬:수호] ${tank.name}이(가) 대신 받음)\n`;
-                logMsg += `   [${atkFormula}]\n`;
-                logMsg += `   [수호 방어 보너스 ${defBonus}]\n`;
-                logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
-                log(logMsg);
+                  let logMsg = `👹 ${m.name} → ${originalTarget.name} (광역공격, [스킬:수호] ${tank.name}이(가) 대신 받음)\n`;
+                  logMsg += `   [${atkFormula}]\n`;
+                  logMsg += `   [수호 방어 보너스 ${defBonus}]\n`;
+                  logMsg += `   → 데미지 ${raw}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
+                  log(logMsg);
 
-                if (tank.endure) tank.endure.accum += res.dealt;
-                setDownIfNeeded(tank);
+                  if (tank.endure) tank.endure.accum += res.dealt;
+                  setDownIfNeeded(tank);
+                }
               } else {
                 // 본인이 직접 받는 피해 - 일반 방어 적용 (중복 방지)
                 if (processedOwnDamage.has(originalTarget.id)) {
@@ -2970,6 +3012,25 @@
                 if (originalTarget.endure) originalTarget.endure.accum += res.dealt;
                 setDownIfNeeded(originalTarget);
               }
+            }
+            
+            // 3단계: 불굴 탱커 합산 피해 처리
+            if (tankAll && tankAllTotalDamage > 0) {
+              const res = applyDamage(tankAll, tankAllTotalDamage, {
+                ignoreDefense: false,
+                allowFloor: true, // 불굴은 HP 1 미만 불가
+                defMult: 1.0,
+              });
+
+              const sourceList = tankAllSources.map(s => `${s.name}:${s.raw}`).join(" + ");
+              let logMsg = `👹 ${m.name} → [스킬:불굴] ${tankAll.name}이(가) 광역 피해를 모두 대신 받음\n`;
+              logMsg += `   [피해 합산: ${sourceList} = ${tankAllTotalDamage}]\n`;
+              if (res.defFormula) logMsg += `   [${res.defFormula}]\n`;
+              logMsg += `   → 데미지 ${tankAllTotalDamage}, 실제 피해량 ${res.dealt} (보호막 흡수 ${res.absorbed}, 방어 경감치 ${res.mitigated})`;
+              log(logMsg);
+
+              if (tankAll.endure) tankAll.endure.accum += res.dealt;
+              // 불굴은 setDownIfNeeded 호출 안함 (HP 1 유지)
             }
             continue;
           }
