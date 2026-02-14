@@ -819,7 +819,7 @@
             {
               key: "FIGHTING_SPIRIT",
               name: "투혼",
-              desc: "지정 적에게 고정 50 (방어 무시), 2턴간 자신 DEF -5",
+              desc: "지정 적에게 고정 50 (방어 무시), 2턴간 자신 DEF -3",
               target: "ENEMY1",
             },
           ],
@@ -843,7 +843,7 @@
             {
               key: "MADNESS",
               name: "광기",
-              desc: "다음 1턴간 공격 스탯 +2 (중첩 가능)",
+              desc: "다음 1턴간 공격 스탯 +3 (중첩 가능)",
               target: "NONE",
             },
             {
@@ -855,7 +855,7 @@
             {
               key: "BLOODFIGHT",
               name: "혈투",
-              desc: "현재 체력 50% 소모 후 지정 적 1에게 최종 공격값*2",
+              desc: "현재 체력 30% 소모 후 지정 적 1에게 최종 공격값*2",
               target: "ENEMY1",
             },
             {
@@ -897,7 +897,7 @@
             {
               key: "ENCOURAGE",
               name: "격려",
-              desc: "다음 1턴간 지정 1인의 지정 스탯 +2 (중첩 가능)",
+              desc: "다음 1턴간 지정 1인의 지정 스탯 +3 (중첩 가능)",
               target: "ALLY1_STAT",
             },
             {
@@ -1040,7 +1040,7 @@
           entity.fightingSpirit &&
           key === "def"
         ) {
-          special -= 5;
+          special -= 3;
         }
 
         return clamp(base + plus + buff + special, 0, 99);
@@ -2582,7 +2582,7 @@
             p.fightingSpirit = { turnsLeft: 2 };
 
             log(
-              `🔥 ${p.name}의 [스킬:투혼] 발동! ${m.name}에게 고정 50 (방어 무시), 2턴간 DEF -5`
+              `🔥 ${p.name}의 [스킬:투혼] 발동! ${m.name}에게 고정 50 (방어 무시), 2턴간 DEF -3`
             );
 
             // 즉시 고정 50 데미지 (방어 무시, 1회만)
@@ -2624,9 +2624,9 @@
           }
 
           if (type === "ACTIVE" && key === "MADNESS") {
-            p.pendingAtkPlusNext += 2;
+            p.pendingAtkPlusNext += 3;
             log(
-              `😈 ${p.name}의 [스킬:광기]가 발동됩니다. 다음 턴 공격 스탯 +2 (누적 ${p.pendingAtkPlusNext})`
+              `😈 ${p.name}의 [스킬:광기]가 발동됩니다. 다음 턴 공격 스탯 +3 (누적 ${p.pendingAtkPlusNext})`
             );
             return;
           }
@@ -2657,7 +2657,7 @@
               log(`⚠️ ${p.name} 혈투 실패: 대상 없음`);
               return;
             }
-            const cost = Math.ceil(p.hp * 0.5);
+            const cost = Math.ceil(p.hp * 0.3);
             p.hp = Math.max(0, p.hp - cost);
             log(`🩸 ${p.name} [스킬:혈투] 발동!: HP ${cost} 가 소모됩니다!`);
             setDownIfNeeded(p);
@@ -2786,7 +2786,7 @@
             if (!ally.pendingEncourage) ally.pendingEncourage = [];
             ally.pendingEncourage.push({
               stat: stat,
-              value: 2,
+              value: 3,
               sourceId: p.id,
             });
             log(
